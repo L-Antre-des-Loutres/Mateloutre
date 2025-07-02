@@ -152,41 +152,45 @@ const event: BotEvent = {
     // Fonction de scraping
     async function scrape() {
       otterlogs.log("Lancement du scraping des actus de Pokekalos.");
+
       try {
-        const news = await fetchPokeNews();
-
-        // Supposons que news[0] est un objet Cheerio ou contient un champ 'html'
-        console.log(news); // ou console.log(news[0].html) selon structure
-
-        if (!news.length) return;
-
-        const latest = news[0];
         const lastTitle = fs.existsSync(CACHE_FILE) ? fs.readFileSync(CACHE_FILE, 'utf-8') : '';
+        const news = await fetchPokeNews(lastTitle);
 
-        if (latest.title !== lastTitle) {
-          fs.writeFileSync(CACHE_FILE, latest.title);
+        if (!news.length) {
+          console.log('✅ Aucune nouvelle actu.');
+          return;
+        }
 
-          const message = `🗒️ Une nouvelle actualité Pokémon est en ligne sur Pokékalos.`;
-          const embed : EmbedBuilder = new EmbedBuilder()
-          .setTitle(latest.title).setURL(latest.link)
-              .setDescription(`${latest.description}\n🔗 [Lire l'article](${latest.link})`)
-              .setImage(latest.image)
+        const channel = client.channels.cache.get(process.env.NEWS_CHANNEL_ID) as TextChannel;
+
+        // Parcours des news en ordre inverse (de la plus ancienne à la plus récente)
+        for (const article of news.reverse()) {
+          const message = `🗒️ Une nouvelle actualité Pokémon est en ligne sur Pokekalos.`;
+
+          const embed = new EmbedBuilder()
+              .setTitle(article.title)
+              .setURL(article.link)
+              .setDescription(`${article.description}\n🔗 [Lire l'article](${article.link})`)
+              .setImage(article.image)
               .setColor(process.env.BOT_COLOR as ColorResolvable)
               .setFields(
-                  {name: 'Source', value: 'Pokekalos', inline: true},
-                  {name: 'Date', value: latest.date, inline: true}
+                  { name: 'Source', value: 'Pokekalos', inline: true },
+                  { name: 'Date', value: article.date, inline: true }
               )
               .setFooter({
                 text: "Mineotter",
                 iconURL: client.user?.displayAvatarURL() || '',
               })
-          .setTimestamp();
-          const channel = client.channels.cache.get(process.env.NEWS_CHANNEL_ID) as TextChannel;
-          await channel.send({content: message, embeds: [embed]});
-          console.log(`✅ Nouvelle actu envoyée : ${latest.title}`);
-        } else {
-          console.log('✅ Aucune nouvelle actu.');
+              .setTimestamp();
+
+          await channel.send({ content: message, embeds: [embed] });
+          console.log(`✅ Nouvelle actu envoyée : ${article.title}`);
         }
+
+        // Met à jour le cache avec le titre le plus récent
+        fs.writeFileSync(CACHE_FILE, news[0].title);
+
       } catch (error) {
         console.error("Erreur lors du scraping :", error);
       }
