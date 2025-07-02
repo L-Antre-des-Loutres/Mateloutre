@@ -1,7 +1,21 @@
-import { Events, ChannelType, PermissionFlagsBits, Colors, Client, Guild } from "discord.js";
+import {
+  Events,
+  ChannelType,
+  PermissionFlagsBits,
+  Colors,
+  Client,
+  Guild,
+  TextChannel,
+  EmbedBuilder,
+  ColorResolvable
+} from "discord.js";
 import * as fs from "fs";
+import * as path from "path";
 import { BotEvent } from "../types";
 import otterlogs from "../utils/otterlogs";
+import {fetchPokeNews} from "../scraper/pokeNewsScraper";
+
+const CACHE_FILE = path.join(__dirname, '../../pokekalos-latest-news.cache');
 
 const event: BotEvent = {
   name: Events.ClientReady,
@@ -120,6 +134,59 @@ const event: BotEvent = {
       }
     } catch (error) {
       otterlogs.error(`Erreur lors de la création de la catégorie, des salons et du rôle : ${error}`);
+    }
+
+    // Appel immédiat au démarrage
+    await (async () => {
+      try {
+        await scrape();
+      } catch (err) {
+        console.error("❌ Erreur initiale du scraping :", err);
+      }
+    })();
+
+    setInterval(async () => {
+      await scrape();
+    }, 1000 * 60 * 30); // toutes les 30 minutes
+
+    // Fonction de scraping
+    async function scrape() {
+      otterlogs.log("Lancement du scraping des actus de Pokekalos.");
+      try {
+        const news = await fetchPokeNews();
+
+        // Supposons que news[0] est un objet Cheerio ou contient un champ 'html'
+        console.log(news); // ou console.log(news[0].html) selon structure
+
+        if (!news.length) return;
+
+        const latest = news[0];
+        const lastTitle = fs.existsSync(CACHE_FILE) ? fs.readFileSync(CACHE_FILE, 'utf-8') : '';
+
+        if (latest.title !== lastTitle) {
+          fs.writeFileSync(CACHE_FILE, latest.title);
+
+          const embed : EmbedBuilder = new EmbedBuilder()
+          .setTitle(latest.title).setURL(latest.link).setDescription(latest.description).setImage(latest.image)
+              .setColor(process.env.BOT_COLOR as ColorResolvable)
+              .setFields(
+                  {name: 'Source', value: 'Pokekalos', inline: true},
+                  {name: 'Date', value: latest.date, inline: true}
+              )
+              .setFooter({
+                text: "Mineotter",
+                iconURL: client.user?.displayAvatarURL() || '',
+              })
+          .setTimestamp();
+          const channel = client.channels.cache.get(process.env.NEWS_CHANNEL_ID) as TextChannel;
+          await channel.send({embeds: [embed]});
+          console.log(`✅ Nouvelle actu envoyée : ${latest.title}`);
+        } else {
+          console.log('✅ Aucune nouvelle actu.');
+        }
+      } catch (error) {
+        console.error("Erreur lors du scraping :", error);
+      }
     }
   }
 };

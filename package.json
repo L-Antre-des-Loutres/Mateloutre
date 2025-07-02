@@ -1,6 +1,6 @@
 {
-  "name": "arisoutre",
-  "version": "2.0.0",
+  "name": "Mateloutre",
+  "version": "1.0.0",
   "description": "Bot discord Antre des loutres",
   "main": "index.js",
   "scripts": {
@@ -20,14 +20,17 @@
   },
   "homepage": "https://github.com/L-Antre-des-Loutres/Arisoutre#readme",
   "dependencies": {
-    "axios": "^1.8.4",
+    "axios": "^1.10.0",
+    "cheerio": "^1.1.0",
     "discord.js": "^14.18.0",
     "dotenv": "^16.5.0",
-    "mysql2": "^3.14.0"
+    "mysql2": "^3.14.0",
+    "typescript": "^5.8.3"
   },
   "devDependencies": {
     "@types/axios": "^0.9.36",
     "@types/dotenv": "^8.2.3",
+    "@types/jquery": "^3.5.32",
     "@types/node": "^22.13.13"
   }
 }
