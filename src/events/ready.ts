@@ -164,8 +164,8 @@ const event: BotEvent = {
 
         const channel = client.channels.cache.get(process.env.NEWS_CHANNEL_ID) as TextChannel;
 
-        // Parcours des news en ordre inverse (de la plus ancienne à la plus récente)
-        for (const article of news.reverse()) {
+        // Envoi des articles du plus ancien au plus récent
+        for (const article of news.slice().reverse()) {
           const message = `🗒️ Une nouvelle actualité Pokémon est en ligne sur Pokekalos.`;
 
           const embed = new EmbedBuilder()
@@ -188,9 +188,8 @@ const event: BotEvent = {
           console.log(`✅ Nouvelle actu envoyée : ${article.title}`);
         }
 
-        // Met à jour le cache avec le titre le plus récent
-        fs.writeFileSync(CACHE_FILE, news[0].title);
-
+        // ⚠️ On ne met à jour le cache qu'après avoir tout envoyé
+        fs.writeFileSync(CACHE_FILE, news[0].title); // Le plus récent est news[0]
       } catch (error) {
         console.error("Erreur lors du scraping :", error);
       }
