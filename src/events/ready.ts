@@ -166,6 +166,7 @@ const event: BotEvent = {
         if (latest.title !== lastTitle) {
           fs.writeFileSync(CACHE_FILE, latest.title);
 
+          const message = `🗒️ Une nouvelle actualité est disponible sur Pokékalos, n'hésitez pas à la regarder !`;
           const embed : EmbedBuilder = new EmbedBuilder()
           .setTitle(latest.title).setURL(latest.link).setDescription(latest.description).setImage(latest.image)
               .setColor(process.env.BOT_COLOR as ColorResolvable)
@@ -179,7 +180,7 @@ const event: BotEvent = {
               })
           .setTimestamp();
           const channel = client.channels.cache.get(process.env.NEWS_CHANNEL_ID) as TextChannel;
-          await channel.send({embeds: [embed]});
+          await channel.send({content: message, embeds: [embed]});
           console.log(`✅ Nouvelle actu envoyée : ${latest.title}`);
         } else {
           console.log('✅ Aucune nouvelle actu.');
