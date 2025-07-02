@@ -166,9 +166,11 @@ const event: BotEvent = {
         if (latest.title !== lastTitle) {
           fs.writeFileSync(CACHE_FILE, latest.title);
 
-          const message = `🗒️ Une nouvelle actualité est disponible sur Pokékalos, n'hésitez pas à la regarder !`;
+          const message = `🗒️ Une nouvelle actualité Pokémon est en ligne sur Pokékalos.`;
           const embed : EmbedBuilder = new EmbedBuilder()
-          .setTitle(latest.title).setURL(latest.link).setDescription(latest.description).setImage(latest.image)
+          .setTitle(latest.title).setURL(latest.link)
+              .setDescription(`${latest.description}\n🔗 [Lire l'article](${latest.link})`)
+              .setImage(latest.image)
               .setColor(process.env.BOT_COLOR as ColorResolvable)
               .setFields(
                   {name: 'Source', value: 'Pokekalos', inline: true},
