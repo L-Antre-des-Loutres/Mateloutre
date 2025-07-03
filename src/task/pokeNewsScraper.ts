@@ -4,7 +4,7 @@ import path from "path";
 import {fetchPokeNews} from "../scraper/pokeNewsScraper";
 import {Client, TextChannel, EmbedBuilder, ColorResolvable} from "discord.js";
 
-const CACHE_FILE = path.join(__dirname, '../../pokekalos-latest-news.cache');
+const CACHE_FILE = path.join(__dirname, '../../cache/pokekalos-latest-news.cache');
 
 let client: Client;
 
