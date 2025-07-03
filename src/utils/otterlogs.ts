@@ -10,21 +10,26 @@ const logStyles = {
   resetColor: "\u001b[0m",
 };
 
+// Fonction pour obtenir l'heure actuelle formatée
+const getFormattedTime = (): string => {
+  return `[${new Date().toLocaleTimeString()}]`;
+};
+
 const otterlogs = {
   success: (message: string): void => {
-    console.log(logStyles.success, message);
+    console.log(logStyles.success, getFormattedTime(), message);
     sendLogMessage(message, false, "success");
   },
   log: (message: string): void => {
-    console.log(logStyles.info, message);
+    console.log(logStyles.info, getFormattedTime(), message);
     sendLogMessage(message, false, "log");
   },
   warn: (message: string): void => {
-    console.warn(logStyles.warn, message);
+    console.warn(logStyles.warn, getFormattedTime(), message);
     sendLogMessage(message, false, "warn");
   },
   error: (message: string): void => {
-    console.error(logStyles.error, message);
+    console.error(logStyles.error, getFormattedTime(), message);
     sendLogMessage(message, true, "error");
   },
   important: (message: string): void => {
