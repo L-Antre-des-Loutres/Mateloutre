@@ -1,0 +1,13 @@
+# dependencies
+/node_modules
+
+# production
+/build
+
+.env
+
+.idea
+
+channels.json
+
+otterlyApiRoutes.json
