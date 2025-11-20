@@ -13,6 +13,8 @@ import {otterbots_eventHandler} from "./handlers/eventHandler";
 import {otterbots_otterguard} from "./utils/otterguard/otterguard";
 import {otterbots_initTask} from "./utils/task";
 import {Otterlyapi} from "./utils/otterlyapi/otterlyapi";
+import { getNewArticles } from "../app/utils/articleScraper";
+import { pokekalosConfig } from "../app/config/pokekalosConfig";
 
 dotenv.config()
 
@@ -54,6 +56,9 @@ export class Otterbots {
 
         // Init OtterlyApiModule
         this.initOtterlyApiModule()
+
+        // Init Pokekalos scraper
+        this.initPokekalosScraper()
     }
 
     public getClient() {
@@ -139,6 +144,20 @@ export class Otterbots {
     private initOtterlyApiModule(){
         const otterlyApiModule = new Otterlyapi()
         otterlyApiModule.init()
+    }
+
+    // Init Pokekalos scraper
+    private initPokekalosScraper(): void {
+        setInterval(async () => {
+            try {
+                const newArticles = await getNewArticles(this.client);
+                if (newArticles.length > 0) {
+                    console.log(`[Pokekalos] ${newArticles.length} nouvel(s) article(s) trouvé(s)`);
+                }
+            } catch (error) {
+                console.error('[Pokekalos] Erreur lors du scraping:', error);
+            }
+        }, pokekalosConfig.updateInterval);
     }
 
 }
