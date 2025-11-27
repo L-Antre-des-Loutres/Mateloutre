@@ -1,18 +1,18 @@
-import {displayLogo} from "./utils/displayLogo";
+import { displayLogo } from "./utils/displayLogo";
 import dotenv from 'dotenv';
-import {clientGatewayIntent} from "../app/config/client";
-import {Client} from "discord.js";
-import {otterBots_loadCommands} from "./handlers/commandHandler";
-import {otterBots_initSalon} from "./utils/salon";
-import {otterBots_interactionCreate} from "./event/commandInteraction";
-import {otterBots_clientReady} from "./event/clientReady";
-import {otterBots_setActivity} from "./utils/activity";
-import {otterBots_initEmoteReact} from "./event/emoteReact";
-import {otterbots_purgeCommand} from "./handlers/purgeCommand";
-import {otterbots_eventHandler} from "./handlers/eventHandler";
-import {otterbots_otterguard} from "./utils/otterguard/otterguard";
-import {otterbots_initTask} from "./utils/task";
-import {Otterlyapi} from "./utils/otterlyapi/otterlyapi";
+import { clientGatewayIntent } from "../app/config/client";
+import { Client } from "discord.js";
+import { otterBots_loadCommands } from "./handlers/commandHandler";
+import { otterBots_initSalon } from "./utils/salon";
+import { otterBots_interactionCreate } from "./event/commandInteraction";
+import { otterBots_clientReady } from "./event/clientReady";
+import { otterBots_setActivity } from "./utils/activity";
+import { otterBots_initEmoteReact } from "./event/emoteReact";
+import { otterbots_purgeCommand } from "./handlers/purgeCommand";
+import { otterbots_eventHandler } from "./handlers/eventHandler";
+import { otterbots_otterguard } from "./utils/otterguard/otterguard";
+import { otterbots_initTask } from "./utils/task";
+import { Otterlyapi } from "./utils/otterlyapi/otterlyapi";
 import { getNewArticles } from "../app/utils/articleScraper";
 import { pokekalosConfig } from "../app/config/pokekalosConfig";
 
@@ -81,7 +81,7 @@ export class Otterbots {
      * @param {Client} [client=this.client] - The client instance from which commands will be purged. If no client is provided, the default is the `this.client` instance.
      * @return {Promise<void>} - A promise that resolves when the command purging process has completed.
      */
-     public async purgeCommand(client: Client = this.client): Promise<void> {
+    public async purgeCommand(client: Client = this.client): Promise<void> {
         await otterbots_purgeCommand(client)
     }
 
@@ -92,7 +92,7 @@ export class Otterbots {
      * @return {Promise<void>} A promise that resolves when the OtterGuard service has started successfully.
      */
     public startOtterGuard(client: Client = this.client): void {
-         otterbots_otterguard(client)
+        otterbots_otterguard(client)
     }
 
     /**
@@ -121,7 +121,7 @@ export class Otterbots {
 
     // Event handler
     private async eventHandler(client: Client = this.client): Promise<void> {
-         await otterbots_eventHandler(client)
+        await otterbots_eventHandler(client)
     }
 
     // Test commands
@@ -132,7 +132,7 @@ export class Otterbots {
 
     // Initialisation des salons
     private async initSalons(client: Client = this.client): Promise<void> {
-      await otterBots_initSalon(client)
+        await otterBots_initSalon(client)
     }
 
     // Initialize the emote react event
@@ -141,7 +141,7 @@ export class Otterbots {
     }
 
     // Init OtterlyApiModule
-    private initOtterlyApiModule(){
+    private initOtterlyApiModule() {
         const otterlyApiModule = new Otterlyapi()
         otterlyApiModule.init()
     }

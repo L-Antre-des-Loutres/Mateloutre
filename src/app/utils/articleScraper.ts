@@ -11,9 +11,11 @@ export interface Article {
     url: string;
     date: string;
     scrapedAt: number;
+    snippet: string;
+    imageUrl: string;
 }
 
-const articlesPath = path.join(__dirname, '../../data/articles.json');
+const articlesPath = path.join(__dirname, '../data/articles.json');
 
 export async function loadStoredArticles(): Promise<Article[]> {
     try {
@@ -25,6 +27,10 @@ export async function loadStoredArticles(): Promise<Article[]> {
 }
 
 export async function saveArticles(articles: Article[]): Promise<void> {
+    const dir = path.dirname(articlesPath);
+    if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+    }
     fs.writeFileSync(articlesPath, JSON.stringify(articles, null, 2));
 }
 
@@ -34,20 +40,90 @@ export async function scrapePokekalos(): Promise<Article[]> {
         const $ = load(response.data);
         const articles: Article[] = [];
 
-        // À adapter selon la structure HTML réelle de Pokekalos
-        $('article, .article-item').each((_, element) => {
-            const title = $(element).find('h2, h3, .title').text().trim();
-            const url = $(element).find('a').attr('href') || '';
-            const date = $(element).find('.date, time').text().trim();
-            const id = url.split('/').filter(Boolean).pop() || Date.now().toString();
+        // Find news items
+        let newsItems = $('.news');
+        if (newsItems.length === 0) {
+            newsItems = $('.media'); // Fallback
+        }
+
+        // If specific classes fail, try to find containers of news links
+        if (newsItems.length === 0) {
+            const links = $('a[href*="/news/"]');
+            const potentialArticles = new Set<any>();
+
+            links.each((_, element) => {
+                const link = $(element);
+                // Go up to find a container that might be the article card
+                // We look for a container that has this link and maybe an image
+                const container = link.closest('div, article, li');
+                if (container.length > 0) {
+                    potentialArticles.add(container.get(0));
+                }
+            });
+
+            // Convert Set back to Cheerio object
+            newsItems = $(Array.from(potentialArticles));
+        }
+
+        newsItems.each((_, element) => {
+            const el = $(element);
+
+            // Title and Link
+            // Try to find the most prominent link in the container
+            let titleEl = el.find('h3 a, h4 a, .title a').first();
+            if (titleEl.length === 0) {
+                // If no header link, look for any link with significant text
+                titleEl = el.find('a[href*="/news/"]').filter((_, a) => $(a).text().trim().length > 10).first();
+            }
+
+            let title = titleEl.text().trim();
+            let url = titleEl.attr('href');
+
+            if (!title || !url) return;
+
+            if (!url.startsWith('http')) {
+                url = 'https://www.pokekalos.fr' + url;
+            }
+
+            // Image
+            let imageUrl = el.find('img').attr('src');
+            if (imageUrl && !imageUrl.startsWith('http')) {
+                imageUrl = 'https://www.pokekalos.fr' + imageUrl;
+            }
+            if (!imageUrl) imageUrl = '';
+
+            // Snippet
+            let snippet = el.find('p, .description, .content').text().trim();
+            // If no p tag, try to get text from the container excluding the title
+            if (!snippet) {
+                const clone = el.clone();
+                clone.find('h3, h4, .title, a').remove();
+                snippet = clone.text().trim();
+            }
+
+            const words = snippet.split(/\s+/);
+            if (words.length > 50) {
+                snippet = words.slice(0, 50).join(' ') + '...';
+            }
+
+            // Date (optional, might not be easily parseable)
+            const date = el.find('.date, time').text().trim() || new Date().toISOString();
+
+            // ID
+            const id = url;
+
+            // Avoid duplicates in the current batch
+            if (articles.some(a => a.id === id)) return;
 
             if (title && url) {
                 articles.push({
                     id,
                     title,
-                    url: url.startsWith('http') ? url : `https://www.pokekalos.fr${url}`,
+                    url,
                     date,
-                    scrapedAt: Date.now()
+                    scrapedAt: Date.now(),
+                    snippet,
+                    imageUrl
                 });
             }
         });
@@ -69,11 +145,20 @@ export async function getNewArticles(client?: Client): Promise<Article[]> {
     if (freshArticles.length > 0) {
         const allArticles = [...freshArticles, ...storedArticles].slice(0, 50);
         await saveArticles(allArticles);
-        
+
         if (client) {
             await notifyNewArticles(client, freshArticles);
         }
     }
 
     return freshArticles;
+}
+
+export async function forcePostLatestArticle(client: Client): Promise<void> {
+    const articles = await scrapePokekalos();
+    if (articles.length > 0) {
+        // Post the very first one (latest)
+        const latest = articles[0];
+        await notifyNewArticles(client, [latest]);
+    }
 }
