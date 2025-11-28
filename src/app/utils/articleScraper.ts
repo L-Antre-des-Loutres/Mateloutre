@@ -40,28 +40,43 @@ export async function scrapePokekalos(): Promise<Article[]> {
         const $ = load(response.data);
         const articles: Article[] = [];
 
-        // Find news items
-        let newsItems = $('.news');
+        // Target specifically the timeline section for "Les dernières actualités Pokémon"
+        const timeline = $('#timeline');
+        let newsItems = timeline.find('.timeline-news');
+
+        // Fallback: if #timeline is not found, try to find the header and get the next container
         if (newsItems.length === 0) {
-            newsItems = $('.media'); // Fallback
+            const header = $('h2:contains("Les dernières actualités Pokémon")');
+            const container = header.parent().find('#timeline');
+            if (container.length > 0) {
+                newsItems = container.find('.timeline-news');
+            }
         }
 
-        // If specific classes fail, try to find containers of news links
+        // If still 0, maybe the structure changed, try generic search BUT restricted to timeline if possible
         if (newsItems.length === 0) {
+            // Try to find any container that looks like the timeline
+            const potentialTimeline = $('.timeline-section').parent();
+            if (potentialTimeline.length > 0) {
+                newsItems = potentialTimeline.find('.timeline-news');
+            }
+        }
+
+        // Last resort: generic search but try to avoid "contest" or "featured" classes if possible
+        if (newsItems.length === 0) {
+            console.warn('[Pokekalos] Timeline not found, using generic fallback.');
             const links = $('a[href*="/news/"]');
             const potentialArticles = new Set<any>();
 
             links.each((_, element) => {
                 const link = $(element);
-                // Go up to find a container that might be the article card
-                // We look for a container that has this link and maybe an image
                 const container = link.closest('div, article, li');
-                if (container.length > 0) {
+                // Exclude known "A la une" containers if possible (e.g. .contest)
+                if (container.length > 0 && !container.hasClass('contest') && !container.parents('.contest').length) {
                     potentialArticles.add(container.get(0));
                 }
             });
 
-            // Convert Set back to Cheerio object
             newsItems = $(Array.from(potentialArticles));
         }
 
