@@ -1,0 +1,101 @@
+
+--- News Links Analysis ---
+Found 95 links containing "/news/"
+
+Link 18: /news/actualites-legendes-pokemon-z-a-mega-dimension-le-plein-d-informations-2597.html
+  Parent 0: div class="contest" id=""
+  Parent 1: article class="" id=""
+  Parent 2: div class="" id="content"
+  Parent 3: div class="" id="subContainer"
+  Parent 4: div class="" id="container"
+  Parent 5: div class="" id="main"
+
+Link 19: /news/actualites-legendes-pokemon-z-a-mega-dimension-le-plein-d-informations-2597.html
+  Parent 0: div class="timeline-desc" id=""
+  Parent 1: div class="timeline-news news-event" id=""
+  Parent 2: div class="timeline-section" id=""
+    -> Preceded by header: Les dernières actualités Pokémon
+  Parent 3: div class="" id="timeline"
+    -> Preceded by header: Nos dossiers à la une
+  Parent 4: article class="" id=""
+  Parent 5: div class="" id="content"
+
+Link 20: /news/actualites-legendes-pokemon-z-a-mega-dimension-le-plein-d-informations-2597.html#commentaires
+  Parent 0: div class="datas" id=""
+  Parent 1: div class="desc-overflow" id=""
+  Parent 2: div class="timeline-desc" id=""
+  Parent 3: div class="timeline-news news-event" id=""
+  Parent 4: div class="timeline-section" id=""
+    -> Preceded by header: Les dernières actualités Pokémon
+  Parent 5: div class="" id="timeline"
+    -> Preceded by header: Nos dossiers à la une
+
+Link 21: /news/actualites-legendes-pokemon-z-a-mega-dimension-le-plein-d-informations-2597.html
+  Parent 0: div class="datas" id=""
+  Parent 1: div class="desc-overflow" id=""
+  Parent 2: div class="timeline-desc" id=""
+  Parent 3: div class="timeline-news news-event" id=""
+  Parent 4: div class="timeline-section" id=""
+    -> Preceded by header: Les dernières actualités Pokémon
+  Parent 5: div class="" id="timeline"
+    -> Preceded by header: Nos dossiers à la une
+
+Link 22: /news/actualites-pokemon-go-le-circuit-pokemon-go-kalos-detaille-2607.html
+  Parent 0: div class="timeline-desc" id=""
+  Parent 1: div class="timeline-news" id=""
+  Parent 2: div class="timeline-section" id=""
+    -> Preceded by header: Les dernières actualités Pokémon
+  Parent 3: div class="" id="timeline"
+    -> Preceded by header: Nos dossiers à la une
+  Parent 4: article class="" id=""
+  Parent 5: div class="" id="content"
+
+Link 23: /news/actualites-pokemon-go-le-circuit-pokemon-go-kalos-detaille-2607.html#commentaires
+  Parent 0: div class="datas" id=""
+  Parent 1: div class="desc-overflow" id=""
+  Parent 2: div class="timeline-desc" id=""
+  Parent 3: div class="timeline-news" id=""
+  Parent 4: div class="timeline-section" id=""
+    -> Preceded by header: Les dernières actualités Pokémon
+  Parent 5: div class="" id="timeline"
+    -> Preceded by header: Nos dossiers à la une
+
+Link 24: /news/actualites-pokemon-go-le-circuit-pokemon-go-kalos-detaille-2607.html
+  Parent 0: div class="datas" id=""
+  Parent 1: div class="desc-overflow" id=""
+  Parent 2: div class="timeline-desc" id=""
+  Parent 3: div class="timeline-news" id=""
+  Parent 4: div class="timeline-section" id=""
+    -> Preceded by header: Les dernières actualités Pokémon
+  Parent 5: div class="" id="timeline"
+    -> Preceded by header: Nos dossiers à la une
+
+Link 25: /news/actualites-pokemon-go-la-saison-des-parcours-precieux-debarque-2606.html
+  Parent 0: div class="timeline-desc" id=""
+  Parent 1: div class="timeline-news" id=""
+  Parent 2: div class="timeline-section" id=""
+    -> Preceded by header: Les dernières actualités Pokémon
+  Parent 3: div class="" id="timeline"
+    -> Preceded by header: Nos dossiers à la une
+  Parent 4: article class="" id=""
+  Parent 5: div class="" id="content"
+
+Link 26: /news/actualites-pokemon-go-la-saison-des-parcours-precieux-debarque-2606.html#commentaires
+  Parent 0: div class="datas" id=""
+  Parent 1: div class="desc-overflow" id=""
+  Parent 2: div class="timeline-desc" id=""
+  Parent 3: div class="timeline-news" id=""
+  Parent 4: div class="timeline-section" id=""
+    -> Preceded by header: Les dernières actualités Pokémon
+  Parent 5: div class="" id="timeline"
+    -> Preceded by header: Nos dossiers à la une
+
+Link 27: /news/actualites-pokemon-go-la-saison-des-parcours-precieux-debarque-2606.html
+  Parent 0: div class="datas" id=""
+  Parent 1: div class="desc-overflow" id=""
+  Parent 2: div class="timeline-desc" id=""
+  Parent 3: div class="timeline-news" id=""
+  Parent 4: div class="timeline-section" id=""
+    -> Preceded by header: Les dernières actualités Pokémon
+  Parent 5: div class="" id="timeline"
+    -> Preceded by header: Nos dossiers à la une
