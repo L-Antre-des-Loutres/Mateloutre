@@ -148,16 +148,33 @@ export class Otterbots {
 
     // Init Pokekalos scraper
     private initPokekalosScraper(): void {
-        setInterval(async () => {
+        this.client.once('ready', async () => {
+            console.log('[Pokekalos] Initialisation du scraper...');
+
+            // Premier lancement immédiat
             try {
                 const newArticles = await getNewArticles(this.client);
                 if (newArticles.length > 0) {
-                    console.log(`[Pokekalos] ${newArticles.length} nouvel(s) article(s) trouvé(s)`);
+                    console.log(`[Pokekalos] ${newArticles.length} nouvel(s) article(s) trouvé(s) au démarrage`);
+                } else {
+                    console.log('[Pokekalos] Aucun nouvel article au démarrage');
                 }
             } catch (error) {
-                console.error('[Pokekalos] Erreur lors du scraping:', error);
+                console.error('[Pokekalos] Erreur lors du scraping au démarrage:', error);
             }
-        }, pokekalosConfig.updateInterval);
+
+            // Lancement périodique
+            setInterval(async () => {
+                try {
+                    const newArticles = await getNewArticles(this.client);
+                    if (newArticles.length > 0) {
+                        console.log(`[Pokekalos] ${newArticles.length} nouvel(s) article(s) trouvé(s)`);
+                    }
+                } catch (error) {
+                    console.error('[Pokekalos] Erreur lors du scraping:', error);
+                }
+            }, pokekalosConfig.updateInterval);
+        });
     }
 
 }
