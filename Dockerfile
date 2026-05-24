@@ -1,7 +1,4 @@
 # syntax=docker/dockerfile:1.7
-
-LABEL="author matheo-1712"
-
 FROM node:22-alpine AS builder
 
 WORKDIR /app
