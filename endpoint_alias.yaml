@@ -1,0 +1,4 @@
+aliases:
+  - alias: "get_discord_users"
+    collection: "discord_users"
+    action: "getFullList"
