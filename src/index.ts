@@ -7,7 +7,6 @@ const bot = new Otterbots();
 // Start the bot
 bot.start();
 bot.setActivity("watching", "Who's that Pokémon?!")
-bot.startOtterGuard()
 
 // Start tasks
 bot.initTask()
