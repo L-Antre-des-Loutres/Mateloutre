@@ -7,8 +7,6 @@ services:
       - "9502:3000"
     env_file:
       - .env
-    environment:
-      DOCKER_HOST: tcp://docker_proxy-discord_bots:2375
     volumes:
       - ./channels.json:/app/channels.json
       - ./cache:/app/cache
@@ -23,9 +21,6 @@ networks:
     driver: bridge
   discord-bots-net:
     name: discord-bots-net
-    external: true
-  games-net:
-    name: server-net
     external: true
   pocketbase_network:
     name: pocketbase_network
