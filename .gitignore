@@ -5,3 +5,4 @@ build
 .idea
 channels.json
 otterlyApiRoutes.json
+cache
