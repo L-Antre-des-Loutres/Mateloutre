@@ -1,35 +1,18 @@
-import { Client, Collection, GatewayIntentBits } from "discord.js";
-import * as dotenv from "dotenv";
-import { readdirSync } from "fs";
-import { join } from "path";
-import { SlashCommand } from "./types";
-import otterlogs from "./utils/otterlogs";
+import {Otterbots} from "./otterbots";
+import {scrapeNews} from "./app/config/task";
 
-dotenv.config();
+// Get bot instance
+const bot = new Otterbots();
 
-const client = new Client({
-    intents: [
-        GatewayIntentBits.Guilds,
-        GatewayIntentBits.GuildMessages,
-        GatewayIntentBits.GuildMessageReactions,
-        GatewayIntentBits.MessageContent,
-        GatewayIntentBits.GuildMembers,
-    ]
+// Start the bot
+bot.start();
+bot.setActivity("watching", "Who's that Pokémon?!")
+bot.startOtterGuard()
+
+// Start tasks
+bot.initTask()
+
+// Trigger initial scraping once the bot is ready
+bot.getClient().on('clientReady', async () => {
+    await scrapeNews();
 });
-
-
-try {
-    client.slashCommands = new Collection<string, SlashCommand>();
-
-    const handlersDirs = join(__dirname, "./handlers/command-event");
-
-    readdirSync(handlersDirs).forEach(file => {
-        require(`${handlersDirs}/${file}`)(client)
-    })
-
-} catch (error) {
-    otterlogs.error(`Erreur lors du chargement des commandes et des events : ${error}`);
-}
-
-client.login(process.env.DISCORD_TOKEN);
-
