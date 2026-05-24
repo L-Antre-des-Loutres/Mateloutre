@@ -10,6 +10,12 @@ import {otterlogs} from "../utils/otterlogs";
  */
 export async function otterbots_eventHandler(client: Client) {
     const eventsPath = path.join(__dirname, '../../app/events');
+
+    if (!fs.existsSync(eventsPath)) {
+        otterlogs.warn(`Events directory not found at ${eventsPath}. Skipping.`);
+        return;
+    }
+
     const eventFiles = fs.readdirSync(eventsPath).filter((file) => file.endsWith('.js'));
 
     try {
