@@ -1,7 +1,7 @@
 services:
-  mineotter:
-    image: mineotter:latest
-    container_name: bot_discord-mineotter
+  mateloutre:
+    image: mateloutre:latest
+    container_name: bot_discord-mateloutre
     restart: unless-stopped
     ports:
       - "9503:3000"
@@ -13,13 +13,13 @@ services:
       - ./channels.json:/app/channels.json
       - ./cache:/app/cache
     networks:
-      - mineotter_bridge
+      - mateloutre_bridge
       - discord-bots-net
       - games-net
       - pocketbase_network
 
 networks:
-  mineotter_bridge:
+  mateloutre_bridge:
     driver: bridge
   discord-bots-net:
     name: discord-bots-net
