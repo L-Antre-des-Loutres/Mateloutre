@@ -9,11 +9,15 @@ services:
       - .env
     volumes:
       - ./channels.json:/app/channels.json
-      - ./cache:/app/cache
+      - ./otterlyApiRoutes.json:/app/otterlyApiRoutes.json
+      - cache_data:/app/cache
     networks:
       - mateloutre_bridge
       - discord-bots-net
       - pocketbase_network
+
+volumes:
+  cache_data:
 
 networks:
   mateloutre_bridge:

@@ -5,6 +5,7 @@ cd "$(dirname "$0")"
 
 [ -f channels.json ]         || echo '{}' > channels.json
 [ -f otterlyApiRoutes.json ] || echo '[]' > otterlyApiRoutes.json
+mkdir -p cache
 
 if ! docker network inspect discord-bots-net >/dev/null 2>&1; then
     echo "Network 'discord-bots-net' not found. Start the docker-proxy compose first." >&2
