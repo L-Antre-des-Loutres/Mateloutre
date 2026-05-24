@@ -33,7 +33,7 @@ import path from "path";
 import {fetchPokeNews} from "../scraper/pokeNewsScraper";
 import {TextChannel, EmbedBuilder, ColorResolvable} from "discord.js";
 
-const CACHE_FILE = path.join(__dirname, '../../../../cache/pokekalos-latest-news.cache');
+const CACHE_FILE = path.join(__dirname, '../../../cache/pokekalos-latest-news.cache');
 
 /**
  * Represents a list of scheduled tasks with their respective configurations.
