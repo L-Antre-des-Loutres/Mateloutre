@@ -13,7 +13,6 @@ services:
     networks:
       - mateloutre_bridge
       - discord-bots-net
-      - games-net
       - pocketbase_network
 
 networks:
