@@ -65,14 +65,27 @@ export default {
             }
 
             const attemptsIds = pokedleCache.get(cacheKey) || [];
-            
-            if (attemptsIds.includes(guessPokemon.id)) {
-                await interaction.reply({ content: "Tu as déjà essayé ce Pokémon aujourd'hui !", ephemeral: true });
+
+            // Si déjà gagné, afficher le tableau de victoire et arrêter
+            if (attemptsIds.includes(targetPokemon.id)) {
+                const attemptsPokemon = attemptsIds.map(id => pokemonList.find(p => p.id === id)!);
+                const avatarUrl = interaction.user.displayAvatarURL({ extension: 'png', size: 128 });
+                const imageBuffer = await generatePokedleImage(attemptsPokemon, targetPokemon, avatarUrl, interaction.user.username);
+                const attachment = new AttachmentBuilder(imageBuffer, { name: 'pokedle-result.png' });
+
+                const embed = new EmbedBuilder()
+                    .setTitle(`Pokémon DLE - ${today}`)
+                    .setColor((process.env.BOT_COLOR || "#FFFFFF") as ColorResolvable)
+                    .setDescription(`Tu as déjà trouvé le Pokémon du jour (**${targetPokemon.name}**) ! Reviens demain pour un nouveau défi.`)
+                    .setImage('attachment://pokedle-result.png')
+                    .setFooter({ text: `Partie terminée en ${attemptsIds.length} essais` });
+
+                await interaction.reply({ embeds: [embed], files: [attachment], ephemeral: true });
                 return;
             }
 
-            if (attemptsIds.includes(targetPokemon.id)) {
-                await interaction.reply({ content: "Tu as déjà trouvé le Pokémon du jour ! Reviens demain.", ephemeral: true });
+            if (attemptsIds.includes(guessPokemon.id)) {
+                await interaction.reply({ content: "Tu as déjà essayé ce Pokémon aujourd'hui !", ephemeral: true });
                 return;
             }
 
@@ -83,7 +96,8 @@ export default {
             
             // Génération de l'image
             const attemptsPokemon = attemptsIds.map(id => pokemonList.find(p => p.id === id)!);
-            const imageBuffer = await generatePokedleImage(attemptsPokemon, targetPokemon);
+            const avatarUrl = interaction.user.displayAvatarURL({ extension: 'png', size: 128 });
+            const imageBuffer = await generatePokedleImage(attemptsPokemon, targetPokemon, avatarUrl, interaction.user.username);
             const attachment = new AttachmentBuilder(imageBuffer, { name: 'pokedle-result.png' });
 
             const embed = new EmbedBuilder()
