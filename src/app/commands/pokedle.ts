@@ -4,35 +4,41 @@ import {
     SlashCommandBuilder,
     AutocompleteInteraction,
     ColorResolvable,
-    AttachmentBuilder
+    AttachmentBuilder,
+    GuildMember
 } from "discord.js";
 import { SlashCommand } from "../../otterbots/types";
 import { PokemonData } from "../utils/pokedle/gameLogic";
 import { generatePokedleImage } from "../utils/pokedle/imageGenerator";
 import { OtterCache } from "../../otterbots/utils/ottercache/ottercache";
+import { POKEDLE_CONSTANTS } from "../utils/pokedle/constants";
 import pokemonListRaw from "../data/pokemon.json";
 
 const pokemonList = pokemonListRaw as PokemonData[];
-const pokedleCache = new OtterCache<number[]>("pokedle.json");
+const pokedleCache = new OtterCache<number[]>(POKEDLE_CONSTANTS.CACHE_FILE_NAME);
 
 export default {
-    name: "pokedle",
+    name: POKEDLE_CONSTANTS.COMMAND_NAME,
     data: new SlashCommandBuilder()
-        .setName("pokedle")
-        .setDescription("Joue au Pokémon DLE quotidien !")
+        .setName(POKEDLE_CONSTANTS.COMMAND_NAME)
+        .setDescription(POKEDLE_CONSTANTS.COMMAND_DESCRIPTION)
         .addSubcommand(sub =>
-            sub.setName("deviner")
-                .setDescription("Devine le Pokémon du jour")
+            sub.setName(POKEDLE_CONSTANTS.SUBCOMMAND_GUESS_NAME)
+                .setDescription(POKEDLE_CONSTANTS.SUBCOMMAND_GUESS_DESCRIPTION)
                 .addStringOption(opt =>
-                    opt.setName("nom")
-                        .setDescription("Le nom du Pokémon")
+                    opt.setName(POKEDLE_CONSTANTS.OPTION_POKEMON_NAME)
+                        .setDescription(POKEDLE_CONSTANTS.OPTION_POKEMON_DESCRIPTION)
                         .setRequired(true)
                         .setAutocomplete(true)
                 )
         )
         .addSubcommand(sub =>
-            sub.setName("stats")
-                .setDescription("Affiche tes statistiques Pokedle")
+            sub.setName(POKEDLE_CONSTANTS.SUBCOMMAND_VIEW_NAME)
+                .setDescription(POKEDLE_CONSTANTS.SUBCOMMAND_VIEW_DESCRIPTION)
+        )
+        .addSubcommand(sub =>
+            sub.setName(POKEDLE_CONSTANTS.SUBCOMMAND_STATS_NAME)
+                .setDescription(POKEDLE_CONSTANTS.SUBCOMMAND_STATS_DESCRIPTION)
         ) as SlashCommandBuilder,
 
     async autocomplete(interaction: AutocompleteInteraction): Promise<void> {
@@ -49,18 +55,23 @@ export default {
     async execute(interaction: ChatInputCommandInteraction): Promise<void> {
         const subcommand = interaction.options.getSubcommand();
         const userId = interaction.user.id;
-        const today = new Date().toISOString().split('T')[0];
-        const cacheKey = `${userId}_${today}`;
+        const now = new Date();
+        const todayISO = now.toISOString().split('T')[0];
+        const todayFR = now.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+        const cacheKey = `${userId}_${todayISO}`;
 
         // Pour la V1, le Pokémon du jour est fixe (Pikachu)
         const targetPokemon = pokemonList.find(p => p.id === 25)!;
+        const displayName = interaction.member instanceof GuildMember 
+            ? interaction.member.displayName 
+            : interaction.user.displayName;
 
-        if (subcommand === "deviner") {
-            const guessName = interaction.options.getString("nom", true);
+        if (subcommand === POKEDLE_CONSTANTS.SUBCOMMAND_GUESS_NAME) {
+            const guessName = interaction.options.getString(POKEDLE_CONSTANTS.OPTION_POKEMON_NAME, true);
             const guessPokemon = pokemonList.find(p => p.name.toLowerCase() === guessName.toLowerCase());
 
             if (!guessPokemon) {
-                await interaction.reply({ content: "Ce Pokémon n'est pas dans ma liste !", ephemeral: true });
+                await interaction.reply({ content: POKEDLE_CONSTANTS.MSG_NOT_IN_LIST, ephemeral: true });
                 return;
             }
 
@@ -70,22 +81,22 @@ export default {
             if (attemptsIds.includes(targetPokemon.id)) {
                 const attemptsPokemon = attemptsIds.map(id => pokemonList.find(p => p.id === id)!);
                 const avatarUrl = interaction.user.displayAvatarURL({ extension: 'png', size: 128 });
-                const imageBuffer = await generatePokedleImage(attemptsPokemon, targetPokemon, avatarUrl, interaction.user.username);
-                const attachment = new AttachmentBuilder(imageBuffer, { name: 'pokedle-result.png' });
+                const imageBuffer = await generatePokedleImage(attemptsPokemon, targetPokemon, avatarUrl, displayName);
+                const attachment = new AttachmentBuilder(imageBuffer, { name: POKEDLE_CONSTANTS.RESULT_IMAGE_NAME });
 
                 const embed = new EmbedBuilder()
-                    .setTitle(`Pokémon DLE - ${today}`)
+                    .setTitle(POKEDLE_CONSTANTS.EMBED_TITLE.replace("{date}", todayFR))
                     .setColor((process.env.BOT_COLOR || "#FFFFFF") as ColorResolvable)
-                    .setDescription(`Tu as déjà trouvé le Pokémon du jour (**${targetPokemon.name}**) ! Reviens demain pour un nouveau défi.`)
-                    .setImage('attachment://pokedle-result.png')
-                    .setFooter({ text: `Partie terminée en ${attemptsIds.length} essais` });
+                    .setDescription(POKEDLE_CONSTANTS.MSG_ALREADY_WON.replace("{target}", targetPokemon.name))
+                    .setImage(`attachment://${POKEDLE_CONSTANTS.RESULT_IMAGE_NAME}`)
+                    .setFooter({ text: POKEDLE_CONSTANTS.FOOTER_WON_TEXT.replace("{count}", attemptsIds.length.toString()) });
 
-                await interaction.reply({ embeds: [embed], files: [attachment], ephemeral: true });
+                await interaction.reply({ embeds: [embed], files: [attachment] });
                 return;
             }
 
             if (attemptsIds.includes(guessPokemon.id)) {
-                await interaction.reply({ content: "Tu as déjà essayé ce Pokémon aujourd'hui !", ephemeral: true });
+                await interaction.reply({ content: POKEDLE_CONSTANTS.MSG_ALREADY_TRIED, ephemeral: true });
                 return;
             }
 
@@ -97,22 +108,61 @@ export default {
             // Génération de l'image
             const attemptsPokemon = attemptsIds.map(id => pokemonList.find(p => p.id === id)!);
             const avatarUrl = interaction.user.displayAvatarURL({ extension: 'png', size: 128 });
-            const imageBuffer = await generatePokedleImage(attemptsPokemon, targetPokemon, avatarUrl, interaction.user.username);
-            const attachment = new AttachmentBuilder(imageBuffer, { name: 'pokedle-result.png' });
+            const imageBuffer = await generatePokedleImage(attemptsPokemon, targetPokemon, avatarUrl, displayName);
+            const attachment = new AttachmentBuilder(imageBuffer, { name: POKEDLE_CONSTANTS.RESULT_IMAGE_NAME });
 
             const embed = new EmbedBuilder()
-                .setTitle(`Pokémon DLE - ${today}`)
+                .setTitle(POKEDLE_CONSTANTS.EMBED_TITLE.replace("{date}", todayFR))
                 .setColor((process.env.BOT_COLOR || "#FFFFFF") as ColorResolvable)
-                .setImage('attachment://pokedle-result.png')
-                .setFooter({ text: `Essai ${attemptsIds.length} • 🟩 Bon • 🟨 Mal placé • 🟥 Mauvais • 🔼 Plus grand • 🔽 Plus petit` });
+                .setImage(`attachment://${POKEDLE_CONSTANTS.RESULT_IMAGE_NAME}`)
+                .setFooter({ 
+                    text: POKEDLE_CONSTANTS.FOOTER_TEXT.replace("{count}", attemptsIds.length.toString()) 
+                });
 
             if (isWin) {
-                embed.addFields({ name: "Bravo !", value: `Tu as trouvé **${targetPokemon.name}** en ${attemptsIds.length} essais !` });
+                embed.addFields({ 
+                    name: POKEDLE_CONSTANTS.MSG_WIN_TITLE, 
+                    value: POKEDLE_CONSTANTS.MSG_WIN_CONTENT
+                        .replace("{target}", targetPokemon.name)
+                        .replace("{attempts}", attemptsIds.length.toString()) 
+                });
+            }
+
+            // Éphémère si pas encore gagné
+            await interaction.reply({ embeds: [embed], files: [attachment], ephemeral: !isWin });
+
+        } else if (subcommand === POKEDLE_CONSTANTS.SUBCOMMAND_VIEW_NAME) {
+            const attemptsIds = pokedleCache.get(cacheKey) || [];
+            if (attemptsIds.length === 0) {
+                await interaction.reply({ content: "Tu n'as pas encore commencé ta partie d'aujourd'hui !", ephemeral: true });
+                return;
+            }
+
+            const attemptsPokemon = attemptsIds.map(id => pokemonList.find(p => p.id === id)!);
+            const avatarUrl = interaction.user.displayAvatarURL({ extension: 'png', size: 128 });
+            const imageBuffer = await generatePokedleImage(attemptsPokemon, targetPokemon, avatarUrl, displayName);
+            const attachment = new AttachmentBuilder(imageBuffer, { name: POKEDLE_CONSTANTS.RESULT_IMAGE_NAME });
+
+            const isWon = attemptsIds.includes(targetPokemon.id);
+
+            const embed = new EmbedBuilder()
+                .setTitle(POKEDLE_CONSTANTS.EMBED_TITLE.replace("{date}", todayFR))
+                .setColor((process.env.BOT_COLOR || "#FFFFFF") as ColorResolvable)
+                .setImage(`attachment://${POKEDLE_CONSTANTS.RESULT_IMAGE_NAME}`)
+                .setFooter({ 
+                    text: isWon 
+                        ? POKEDLE_CONSTANTS.FOOTER_WON_TEXT.replace("{count}", attemptsIds.length.toString())
+                        : POKEDLE_CONSTANTS.FOOTER_TEXT.replace("{count}", attemptsIds.length.toString()) 
+                });
+
+            if (isWon) {
+                embed.setDescription(`Partie terminée ! Le Pokémon était **${targetPokemon.name}**.`);
             }
 
             await interaction.reply({ embeds: [embed], files: [attachment] });
-        } else if (subcommand === "stats") {
-            await interaction.reply({ content: "Les statistiques arrivent bientôt !", ephemeral: true });
+
+        } else if (subcommand === POKEDLE_CONSTANTS.SUBCOMMAND_STATS_NAME) {
+            await interaction.reply({ content: POKEDLE_CONSTANTS.MSG_STATS_COMING, ephemeral: true });
         }
     }
 } as SlashCommand;
