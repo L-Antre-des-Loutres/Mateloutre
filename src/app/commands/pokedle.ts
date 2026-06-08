@@ -8,13 +8,12 @@ import {
     GuildMember
 } from "discord.js";
 import { SlashCommand } from "../../otterbots/types";
-import { PokemonData } from "../utils/pokedle/gameLogic";
 import { generatePokedleImage } from "../utils/pokedle/imageGenerator";
 import { OtterCache } from "../../otterbots/utils/ottercache/ottercache";
 import { POKEDLE_CONSTANTS } from "../utils/pokedle/constants";
-import pokemonListRaw from "../data/pokemon.json";
+import { PapiService } from "../utils/papi/papiService";
+import {PokemonData} from "../utils/pokedle/gameLogic";
 
-const pokemonList = pokemonListRaw as PokemonData[];
 const pokedleCache = new OtterCache<number[]>(POKEDLE_CONSTANTS.CACHE_FILE_NAME);
 
 export default {
@@ -42,10 +41,31 @@ export default {
         ) as SlashCommandBuilder,
 
     async autocomplete(interaction: AutocompleteInteraction): Promise<void> {
+        const pokemonList = await PapiService.getAllPokemonForPokedle();
         const focusedValue = interaction.options.getFocused().toLowerCase();
-        const choices = pokemonList
-            .filter(p => p.name.toLowerCase().includes(focusedValue))
-            .slice(0, 25);
+        
+        let choices: PokemonData[];
+        if (focusedValue === "") {
+            // Ordre du Pokédex par défaut (déjà trié par ID dans PapiService)
+            choices = pokemonList.slice(0, 25);
+        } else {
+            // Tri par pertinence/lettre quand on commence à taper
+            choices = pokemonList
+                .filter(p => p.name.toLowerCase().includes(focusedValue))
+                .sort((a, b) => {
+                    const aName = a.name.toLowerCase();
+                    const bName = b.name.toLowerCase();
+                    const aStarts = aName.startsWith(focusedValue);
+                    const bStarts = bName.startsWith(focusedValue);
+                    
+                    if (aStarts && !bStarts) return -1;
+                    if (!aStarts && bStarts) return 1;
+                    
+                    // Si les deux commencent pareil ou ne commencent pas par la lettre, tri alphabétique
+                    return aName.localeCompare(bName);
+                })
+                .slice(0, 25);
+        }
         
         await interaction.respond(
             choices.map(p => ({ name: p.name, value: p.name }))
@@ -53,15 +73,37 @@ export default {
     },
 
     async execute(interaction: ChatInputCommandInteraction): Promise<void> {
+        // Defer reply immediately because image generation and API calls might take more than 3s
+        await interaction.deferReply({ ephemeral: true });
+
+        const pokemonList = await PapiService.getAllPokemonForPokedle();
+        if (pokemonList.length === 0) {
+            await interaction.editReply({ content: "Désolé, impossible de charger les données des Pokémon pour le moment." });
+            return;
+        }
+
         const subcommand = interaction.options.getSubcommand();
         const userId = interaction.user.id;
         const now = new Date();
-        const todayISO = now.toISOString().split('T')[0];
+        
+        // Utilisation de la date locale (YYYY-MM-DD) pour un reset à minuit heure locale du serveur
+        const todayISO = now.toLocaleDateString('en-CA'); 
         const todayFR = now.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
         const cacheKey = `${userId}_${todayISO}`;
 
-        // Pour la V1, le Pokémon du jour est fixe (Pikachu)
-        const targetPokemon = pokemonList.find(p => p.id === 25)!;
+        // Algorithme de hachage plus robuste pour le Pokémon du jour (basé sur sdbm)
+        // On inclut l'ID de l'utilisateur pour que chaque joueur ait un Pokémon différent
+        const getDailyIndex = (seed: string, max: number) => {
+            let hash = 0;
+            for (let i = 0; i < seed.length; i++) {
+                hash = seed.charCodeAt(i) + (hash << 6) + (hash << 16) - hash;
+            }
+            return Math.abs(hash) % max;
+        };
+
+        const targetIndex = getDailyIndex(`${todayISO}_${userId}`, pokemonList.length);
+        const targetPokemon = pokemonList[targetIndex];
+
         const displayName = interaction.member instanceof GuildMember 
             ? interaction.member.displayName 
             : interaction.user.displayName;
@@ -71,7 +113,7 @@ export default {
             const guessPokemon = pokemonList.find(p => p.name.toLowerCase() === guessName.toLowerCase());
 
             if (!guessPokemon) {
-                await interaction.reply({ content: POKEDLE_CONSTANTS.MSG_NOT_IN_LIST, ephemeral: true });
+                await interaction.editReply({ content: POKEDLE_CONSTANTS.MSG_NOT_IN_LIST });
                 return;
             }
 
@@ -91,12 +133,12 @@ export default {
                     .setImage(`attachment://${POKEDLE_CONSTANTS.RESULT_IMAGE_NAME}`)
                     .setFooter({ text: POKEDLE_CONSTANTS.FOOTER_WON_TEXT.replace("{count}", attemptsIds.length.toString()) });
 
-                await interaction.reply({ embeds: [embed], files: [attachment] });
+                await interaction.editReply({ embeds: [embed], files: [attachment] });
                 return;
             }
 
             if (attemptsIds.includes(guessPokemon.id)) {
-                await interaction.reply({ content: POKEDLE_CONSTANTS.MSG_ALREADY_TRIED, ephemeral: true });
+                await interaction.editReply({ content: POKEDLE_CONSTANTS.MSG_ALREADY_TRIED });
                 return;
             }
 
@@ -126,15 +168,22 @@ export default {
                         .replace("{target}", targetPokemon.name)
                         .replace("{attempts}", attemptsIds.length.toString()) 
                 });
+                
+                // If it's a win, we send a public follow-up message instead of just editing the ephemeral reply
+                await interaction.editReply({ embeds: [embed], files: [attachment] });
+                await interaction.followUp({ 
+                    content: `GG ! **${displayName}** a trouvé le Pokémon du jour : **${targetPokemon.name}** en **${attemptsIds.length}** essais !`,
+                    embeds: [embed], 
+                    files: [attachment] 
+                });
+            } else {
+                await interaction.editReply({ embeds: [embed], files: [attachment] });
             }
-
-            // Éphémère si pas encore gagné
-            await interaction.reply({ embeds: [embed], files: [attachment], ephemeral: !isWin });
 
         } else if (subcommand === POKEDLE_CONSTANTS.SUBCOMMAND_VIEW_NAME) {
             const attemptsIds = pokedleCache.get(cacheKey) || [];
             if (attemptsIds.length === 0) {
-                await interaction.reply({ content: "Tu n'as pas encore commencé ta partie d'aujourd'hui !", ephemeral: true });
+                await interaction.editReply({ content: "Tu n'as pas encore commencé ta partie d'aujourd'hui !" });
                 return;
             }
 
@@ -159,10 +208,11 @@ export default {
                 embed.setDescription(`Partie terminée ! Le Pokémon était **${targetPokemon.name}**.`);
             }
 
-            await interaction.reply({ embeds: [embed], files: [attachment] });
+            await interaction.editReply({ embeds: [embed], files: [attachment] });
 
         } else if (subcommand === POKEDLE_CONSTANTS.SUBCOMMAND_STATS_NAME) {
-            await interaction.reply({ content: POKEDLE_CONSTANTS.MSG_STATS_COMING, ephemeral: true });
+            await interaction.editReply({ content: POKEDLE_CONSTANTS.MSG_STATS_COMING });
         }
     }
 } as SlashCommand;
+
