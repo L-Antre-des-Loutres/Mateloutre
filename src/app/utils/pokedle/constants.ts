@@ -55,7 +55,7 @@ export const POKEDLE_COLORS = {
 };
 
 export const POKEDLE_EMOJIS = {
-    HIGHER: "🔼",
-    LOWER: "🔽",
+    HIGHER: "▲",
+    LOWER: "▼",
     CHECK: "✓"
 };
