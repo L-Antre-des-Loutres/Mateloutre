@@ -38,6 +38,7 @@ RUN apk add --no-cache \
 COPY --from=builder /app/package.json /app/package-lock.json ./
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/build ./build
+COPY assets ./assets
 COPY endpoint_alias.yaml ./
 RUN mkdir -p cache
 

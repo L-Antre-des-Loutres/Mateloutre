@@ -1,7 +1,12 @@
-import { createCanvas, loadImage } from 'canvas';
+import { createCanvas, loadImage, registerFont } from 'canvas';
 import { PokemonData, comparePokemonV2, ComparisonResult } from './gameLogic';
 import { POKEDLE_COLORS, POKEDLE_CONSTANTS, POKEDLE_EMOJIS } from './constants';
 import axios from 'axios';
+import path from 'path';
+
+// Enregistrement de la police pour Linux/Docker
+const fontPath = path.join(process.cwd(), 'assets', 'fonts', 'Roboto-Bold.ttf');
+registerFont(fontPath, { family: 'Roboto', weight: 'bold' });
 
 const CELL_WIDTH = 120;
 const CELL_HEIGHT = 60;
@@ -58,7 +63,7 @@ export async function generatePokedleImage(attempts: PokemonData[], target: Poke
     }
 
     ctx.fillStyle = COLORS.text;
-    ctx.font = 'bold 32px Arial';
+    ctx.font = 'bold 32px Roboto';
     ctx.textAlign = 'left';
     const title = username 
         ? POKEDLE_CONSTANTS.IMAGE_TITLE.replace("{username}", username)
@@ -74,7 +79,7 @@ export async function generatePokedleImage(attempts: PokemonData[], target: Poke
         POKEDLE_CONSTANTS.HEADER_HEIGHT,
         POKEDLE_CONSTANTS.HEADER_WEIGHT
     ];
-    ctx.font = 'bold 20px Arial';
+    ctx.font = 'bold 20px Roboto';
     ctx.fillStyle = COLORS.text;
     ctx.textAlign = 'center';
 
@@ -95,7 +100,7 @@ export async function generatePokedleImage(attempts: PokemonData[], target: Poke
         // Name
         ctx.fillStyle = COLORS.text;
         ctx.textAlign = 'left';
-        ctx.font = 'bold 18px Arial';
+        ctx.font = 'bold 18px Roboto';
         ctx.fillText(guess.name, xCursor + 15, y + CELL_HEIGHT / 2 + 7);
         xCursor += NAME_WIDTH;
 
@@ -116,14 +121,14 @@ export async function generatePokedleImage(attempts: PokemonData[], target: Poke
             ctx.textAlign = 'center';
             
             if (s.res === "exact" || s.res === "partial" || s.res === "wrong") {
-                ctx.font = '16px Arial';
+                ctx.font = '16px Roboto';
                 ctx.fillText(s.val?.toString() || "-", xCursor + CELL_WIDTH / 2, y + CELL_HEIGHT / 2 + 7);
             } else {
                 const display = s.res === "higher" ? POKEDLE_EMOJIS.HIGHER : POKEDLE_EMOJIS.LOWER;
-                ctx.font = '22px Arial';
+                ctx.font = '22px Roboto';
                 ctx.fillText(display, xCursor + CELL_WIDTH / 2, y + CELL_HEIGHT / 2 - 5);
                 
-                ctx.font = '14px Arial';
+                ctx.font = '14px Roboto';
                 let valStr = s.val?.toString() || "-";
                 if (s.val !== null) {
                     const headerName = headers[i + 1];
