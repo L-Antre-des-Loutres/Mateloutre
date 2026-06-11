@@ -5,16 +5,28 @@ import {
     AutocompleteInteraction,
     ColorResolvable,
     AttachmentBuilder,
-    GuildMember
+    GuildMember,
+    TextBasedChannel,
+    Message,
+    MessagePayload,
+    MessageCreateOptions
 } from "discord.js";
 import { SlashCommand } from "../../otterbots/types";
 import { generatePokedleImage } from "../utils/pokedle/imageGenerator";
 import { OtterCache } from "../../otterbots/utils/ottercache/ottercache";
 import { POKEDLE_CONSTANTS } from "../utils/pokedle/constants";
 import { PapiService } from "../utils/papi/papiService";
-import {PokemonData} from "../utils/pokedle/gameLogic";
+import { PokemonData } from "../utils/pokedle/gameLogic";
 
-const pokedleCache = new OtterCache<number[]>(POKEDLE_CONSTANTS.CACHE_FILE_NAME);
+export interface PokedleSession {
+    attemptsIds: number[];
+    messageId?: string;
+    channelId?: string;
+}
+
+type SendableChannel = TextBasedChannel & { send(options: string | MessagePayload | MessageCreateOptions): Promise<Message> };
+
+const pokedleCache = new OtterCache<PokedleSession | number[]>(POKEDLE_CONSTANTS.CACHE_FILE_NAME);
 
 export default {
     name: POKEDLE_CONSTANTS.COMMAND_NAME,
@@ -73,15 +85,6 @@ export default {
     },
 
     async execute(interaction: ChatInputCommandInteraction): Promise<void> {
-        // Defer reply immediately because image generation and API calls might take more than 3s
-        await interaction.deferReply({ ephemeral: true });
-
-        const pokemonList = await PapiService.getAllPokemonForPokedle();
-        if (pokemonList.length === 0) {
-            await interaction.editReply({ content: "Désolé, impossible de charger les données des Pokémon pour le moment." });
-            return;
-        }
-
         const subcommand = interaction.options.getSubcommand();
         const userId = interaction.user.id;
         const now = new Date();
@@ -90,6 +93,29 @@ export default {
         const todayISO = now.toLocaleDateString('en-CA'); 
         const todayFR = now.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
         const cacheKey = `${userId}_${todayISO}`;
+
+        // Récupération ou initialisation de la session (gestion rétrocompatibilité de l'ancien cache)
+        const sessionRaw = pokedleCache.get(cacheKey);
+        let session: PokedleSession = { attemptsIds: [] };
+        if (sessionRaw) {
+            if (Array.isArray(sessionRaw)) {
+                session.attemptsIds = sessionRaw;
+            } else {
+                session = sessionRaw as PokedleSession;
+            }
+        }
+
+        const attemptsIds = session.attemptsIds;
+        const isFirstGuess = attemptsIds.length === 0 && subcommand === POKEDLE_CONSTANTS.SUBCOMMAND_GUESS_NAME;
+
+        // Le premier essai est un message public. Les essais suivants ou la vue sont éphémères.
+        await interaction.deferReply({ ephemeral: !isFirstGuess });
+
+        const pokemonList = await PapiService.getAllPokemonForPokedle();
+        if (pokemonList.length === 0) {
+            await interaction.editReply({ content: "Désolé, impossible de charger les données des Pokémon pour le moment." });
+            return;
+        }
 
         // Algorithme de hachage plus robuste pour le Pokémon du jour (basé sur sdbm)
         // On inclut l'ID de l'utilisateur pour que chaque joueur ait un Pokémon différent
@@ -117,23 +143,10 @@ export default {
                 return;
             }
 
-            const attemptsIds = pokedleCache.get(cacheKey) || [];
-
             // Si déjà gagné, afficher le tableau de victoire et arrêter
             if (attemptsIds.includes(targetPokemon.id)) {
-                const attemptsPokemon = attemptsIds.map(id => pokemonList.find(p => p.id === id)!);
-                const avatarUrl = interaction.user.displayAvatarURL({ extension: 'png', size: 128 });
-                const imageBuffer = await generatePokedleImage(attemptsPokemon, targetPokemon, avatarUrl, displayName);
-                const attachment = new AttachmentBuilder(imageBuffer, { name: POKEDLE_CONSTANTS.RESULT_IMAGE_NAME });
-
-                const embed = new EmbedBuilder()
-                    .setTitle(POKEDLE_CONSTANTS.EMBED_TITLE.replace("{date}", todayFR))
-                    .setColor((process.env.BOT_COLOR || "#FFFFFF") as ColorResolvable)
-                    .setDescription(POKEDLE_CONSTANTS.MSG_ALREADY_WON.replace("{target}", targetPokemon.name))
-                    .setImage(`attachment://${POKEDLE_CONSTANTS.RESULT_IMAGE_NAME}`)
-                    .setFooter({ text: POKEDLE_CONSTANTS.FOOTER_WON_TEXT.replace("{count}", attemptsIds.length.toString()) });
-
-                await interaction.editReply({ embeds: [embed], files: [attachment] });
+                const msgLink = session.messageId && session.channelId ? `\n[Voir ton Pokedle public](https://discord.com/channels/${interaction.guildId}/${session.channelId}/${session.messageId})` : "";
+                await interaction.editReply({ content: POKEDLE_CONSTANTS.MSG_ALREADY_WON.replace("{target}", targetPokemon.name) + msgLink });
                 return;
             }
 
@@ -143,7 +156,7 @@ export default {
             }
 
             attemptsIds.push(guessPokemon.id);
-            pokedleCache.set(cacheKey, attemptsIds);
+            session.attemptsIds = attemptsIds;
 
             const isWin = guessPokemon.id === targetPokemon.id;
             
@@ -158,7 +171,9 @@ export default {
                 .setColor((process.env.BOT_COLOR || "#FFFFFF") as ColorResolvable)
                 .setImage(`attachment://${POKEDLE_CONSTANTS.RESULT_IMAGE_NAME}`)
                 .setFooter({ 
-                    text: POKEDLE_CONSTANTS.FOOTER_TEXT.replace("{count}", attemptsIds.length.toString()) 
+                    text: isWin 
+                        ? POKEDLE_CONSTANTS.FOOTER_WON_TEXT.replace("{count}", attemptsIds.length.toString())
+                        : POKEDLE_CONSTANTS.FOOTER_TEXT.replace("{count}", attemptsIds.length.toString()) 
                 });
 
             if (isWin) {
@@ -168,20 +183,51 @@ export default {
                         .replace("{target}", targetPokemon.name)
                         .replace("{attempts}", attemptsIds.length.toString()) 
                 });
-                
-                // If it's a win, we send a public follow-up message instead of just editing the ephemeral reply
-                await interaction.editReply({ embeds: [embed], files: [attachment] });
-                await interaction.followUp({ 
-                    content: `GG ! **${displayName}** a trouvé le Pokémon du jour : **${targetPokemon.name}** en **${attemptsIds.length}** essais !`,
-                    embeds: [embed], 
-                    files: [attachment] 
-                });
+            }
+
+            if (isFirstGuess) {
+                const msg = await interaction.editReply({ embeds: [embed], files: [attachment] });
+                session.messageId = msg.id;
+                session.channelId = msg.channelId;
+                pokedleCache.set(cacheKey, session);
             } else {
-                await interaction.editReply({ embeds: [embed], files: [attachment] });
+                let edited = false;
+                let msgLink = "";
+                
+                if (session.messageId && session.channelId) {
+                    try {
+                        const channel = await interaction.client.channels.fetch(session.channelId);
+                        if (channel && channel.isTextBased() && 'messages' in channel) {
+                            const msg = await channel.messages.fetch(session.messageId);
+                            if (msg) {
+                                await msg.edit({ embeds: [embed], files: [attachment] });
+                                edited = true;
+                                msgLink = `https://discord.com/channels/${interaction.guildId}/${session.channelId}/${session.messageId}`;
+                            }
+                        }
+                    } catch (e) {
+                        console.error("Impossible d'éditer le message Pokedle original", e);
+                    }
+                }
+
+                pokedleCache.set(cacheKey, session);
+
+                if (edited) {
+                    if (isWin) {
+                        await interaction.editReply({ content: `🎉 Bravo ! Ton [Pokedle public](${msgLink}) a été mis à jour avec ta victoire.` });
+                        const channel = await interaction.client.channels.fetch(session.channelId!);
+                        if (channel && channel.isTextBased() && 'send' in channel) {
+                            await (channel as SendableChannel).send({ content: `GG <@${interaction.user.id}> ! Tu as trouvé le Pokémon du jour : **${targetPokemon.name}** en **${attemptsIds.length}** essais !` });
+                        }
+                    } else {
+                        await interaction.editReply({ content: `Essai pris en compte ! Ton [Pokedle public](${msgLink}) a été mis à jour.` });
+                    }
+                } else {
+                    await interaction.editReply({ content: "Voici ton Pokedle (le message original est introuvable) :", embeds: [embed], files: [attachment] });
+                }
             }
 
         } else if (subcommand === POKEDLE_CONSTANTS.SUBCOMMAND_VIEW_NAME) {
-            const attemptsIds = pokedleCache.get(cacheKey) || [];
             if (attemptsIds.length === 0) {
                 await interaction.editReply({ content: "Tu n'as pas encore commencé ta partie d'aujourd'hui !" });
                 return;

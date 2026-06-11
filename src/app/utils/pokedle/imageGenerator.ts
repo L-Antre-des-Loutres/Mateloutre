@@ -3,11 +3,11 @@ import { PokemonData, comparePokemonV2, ComparisonResult } from './gameLogic';
 import { POKEDLE_COLORS, POKEDLE_CONSTANTS, POKEDLE_EMOJIS } from './constants';
 import axios from 'axios';
 
-const CELL_WIDTH = 80;
-const CELL_HEIGHT = 40;
-const NAME_WIDTH = 150;
-const PADDING = 20;
-const AVATAR_SIZE = 60;
+const CELL_WIDTH = 120;
+const CELL_HEIGHT = 60;
+const NAME_WIDTH = 220;
+const PADDING = 30;
+const AVATAR_SIZE = 80;
 
 const COLORS: Record<ComparisonResult | 'bg' | 'text' | 'border', string> = {
     exact: POKEDLE_COLORS.EXACT,
@@ -25,7 +25,7 @@ const COLORS: Record<ComparisonResult | 'bg' | 'text' | 'border', string> = {
  */
 export async function generatePokedleImage(attempts: PokemonData[], target: PokemonData, avatarUrl?: string, username?: string): Promise<Buffer> {
     const rows = attempts.length;
-    const headerHeight = 80;
+    const headerHeight = 100;
     const width = NAME_WIDTH + (CELL_WIDTH * 5) + (PADDING * 2);
     const height = headerHeight + (CELL_HEIGHT * (rows + 1)) + (PADDING * 2);
 
@@ -51,19 +51,19 @@ export async function generatePokedleImage(attempts: PokemonData[], target: Poke
             ctx.drawImage(avatarImg, PADDING, PADDING, AVATAR_SIZE, AVATAR_SIZE);
             ctx.restore();
             
-            titleX += AVATAR_SIZE + 15;
+            titleX += AVATAR_SIZE + 20;
         } catch (error) {
             console.error("Erreur chargement avatar:", error);
         }
     }
 
     ctx.fillStyle = COLORS.text;
-    ctx.font = 'bold 24px Arial';
+    ctx.font = 'bold 32px Arial';
     ctx.textAlign = 'left';
     const title = username 
         ? POKEDLE_CONSTANTS.IMAGE_TITLE.replace("{username}", username)
         : POKEDLE_CONSTANTS.IMAGE_DEFAULT_TITLE;
-    ctx.fillText(title, titleX, PADDING + AVATAR_SIZE / 2 + 8);
+    ctx.fillText(title, titleX, PADDING + AVATAR_SIZE / 2 + 10);
 
     // Header Table
     const headers = [
@@ -74,7 +74,7 @@ export async function generatePokedleImage(attempts: PokemonData[], target: Poke
         POKEDLE_CONSTANTS.HEADER_HEIGHT,
         POKEDLE_CONSTANTS.HEADER_WEIGHT
     ];
-    ctx.font = 'bold 16px Arial';
+    ctx.font = 'bold 20px Arial';
     ctx.fillStyle = COLORS.text;
     ctx.textAlign = 'center';
 
@@ -82,7 +82,7 @@ export async function generatePokedleImage(attempts: PokemonData[], target: Poke
     const tableStartY = headerHeight + PADDING;
     headers.forEach((h, i) => {
         const w = i === 0 ? NAME_WIDTH : CELL_WIDTH;
-        ctx.fillText(h, xCursor + w / 2, tableStartY + CELL_HEIGHT / 2 + 5);
+        ctx.fillText(h, xCursor + w / 2, tableStartY + CELL_HEIGHT / 2 + 8);
         xCursor += w;
     });
 
@@ -95,8 +95,8 @@ export async function generatePokedleImage(attempts: PokemonData[], target: Poke
         // Name
         ctx.fillStyle = COLORS.text;
         ctx.textAlign = 'left';
-        ctx.font = '14px Arial';
-        ctx.fillText(guess.name, xCursor + 10, y + CELL_HEIGHT / 2 + 5);
+        ctx.font = 'bold 18px Arial';
+        ctx.fillText(guess.name, xCursor + 15, y + CELL_HEIGHT / 2 + 7);
         xCursor += NAME_WIDTH;
 
         // Stats
@@ -110,27 +110,27 @@ export async function generatePokedleImage(attempts: PokemonData[], target: Poke
 
         stats.forEach((s, i) => {
             ctx.fillStyle = COLORS[s.res];
-            ctx.fillRect(xCursor + 2, y + 2, CELL_WIDTH - 4, CELL_HEIGHT - 4);
+            ctx.fillRect(xCursor + 3, y + 3, CELL_WIDTH - 6, CELL_HEIGHT - 6);
 
             ctx.fillStyle = COLORS.text;
             ctx.textAlign = 'center';
             
             if (s.res === "exact" || s.res === "partial" || s.res === "wrong") {
-                ctx.font = '12px Arial';
-                ctx.fillText(s.val?.toString() || "-", xCursor + CELL_WIDTH / 2, y + CELL_HEIGHT / 2 + 5);
+                ctx.font = '16px Arial';
+                ctx.fillText(s.val?.toString() || "-", xCursor + CELL_WIDTH / 2, y + CELL_HEIGHT / 2 + 7);
             } else {
                 const display = s.res === "higher" ? POKEDLE_EMOJIS.HIGHER : POKEDLE_EMOJIS.LOWER;
-                ctx.font = '16px Arial';
-                ctx.fillText(display, xCursor + CELL_WIDTH / 2, y + CELL_HEIGHT / 2 - 2);
+                ctx.font = '22px Arial';
+                ctx.fillText(display, xCursor + CELL_WIDTH / 2, y + CELL_HEIGHT / 2 - 5);
                 
-                ctx.font = '10px Arial';
+                ctx.font = '14px Arial';
                 let valStr = s.val?.toString() || "-";
                 if (s.val !== null) {
                     const headerName = headers[i + 1];
                     if (headerName === POKEDLE_CONSTANTS.HEADER_HEIGHT) valStr += POKEDLE_CONSTANTS.UNIT_HEIGHT;
                     if (headerName === POKEDLE_CONSTANTS.HEADER_WEIGHT) valStr += POKEDLE_CONSTANTS.UNIT_WEIGHT;
                 }
-                ctx.fillText(valStr, xCursor + CELL_WIDTH / 2, y + CELL_HEIGHT / 2 + 12);
+                ctx.fillText(valStr, xCursor + CELL_WIDTH / 2, y + CELL_HEIGHT / 2 + 15);
             }
             xCursor += CELL_WIDTH;
         });
