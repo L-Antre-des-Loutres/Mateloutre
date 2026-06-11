@@ -1,6 +1,6 @@
 import { createCanvas, loadImage, registerFont } from 'canvas';
 import { PokemonData, comparePokemonV2, ComparisonResult } from './gameLogic';
-import { POKEDLE_COLORS, POKEDLE_CONSTANTS, POKEDLE_EMOJIS } from './constants';
+import { POKEDLE_COLORS, POKEDLE_CONSTANTS } from './constants';
 import axios from 'axios';
 import path from 'path';
 
@@ -124,9 +124,25 @@ export async function generatePokedleImage(attempts: PokemonData[], target: Poke
                 ctx.font = '16px Roboto';
                 ctx.fillText(s.val?.toString() || "-", xCursor + CELL_WIDTH / 2, y + CELL_HEIGHT / 2 + 7);
             } else {
-                const display = s.res === "higher" ? POKEDLE_EMOJIS.HIGHER : POKEDLE_EMOJIS.LOWER;
-                ctx.font = '22px Roboto';
-                ctx.fillText(display, xCursor + CELL_WIDTH / 2, y + CELL_HEIGHT / 2 - 5);
+                // Dessin de la flèche
+                const arrowSize = 16;
+                const arrowY = y + CELL_HEIGHT / 2 - 7;
+                const centerX = xCursor + CELL_WIDTH / 2;
+                
+                ctx.beginPath();
+                if (s.res === "higher") {
+                    // Flèche vers le haut
+                    ctx.moveTo(centerX, arrowY - arrowSize / 2);
+                    ctx.lineTo(centerX - arrowSize / 2, arrowY + arrowSize / 2);
+                    ctx.lineTo(centerX + arrowSize / 2, arrowY + arrowSize / 2);
+                } else {
+                    // Flèche vers le bas
+                    ctx.moveTo(centerX, arrowY + arrowSize / 2);
+                    ctx.lineTo(centerX - arrowSize / 2, arrowY - arrowSize / 2);
+                    ctx.lineTo(centerX + arrowSize / 2, arrowY - arrowSize / 2);
+                }
+                ctx.closePath();
+                ctx.fill();
                 
                 ctx.font = '14px Roboto';
                 let valStr = s.val?.toString() || "-";
