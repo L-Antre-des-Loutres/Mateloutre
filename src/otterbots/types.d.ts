@@ -44,7 +44,7 @@ declare module "discord.js" {
 }
 
 export interface SlashCommand {
-    autocomplete: boolean;
+    autocomplete: boolean | ((interaction: AutocompleteInteraction) => Promise<void>);
     name: string,
     data: SlashCommandBuilder;
     execute: (interaction: ChatInputCommandInteraction<CacheType> | MessageContextMenuCommandInteraction<CacheType> | UserContextMenuCommandInteraction<CacheType> | PrimaryEntryPointCommandInteraction<CacheType> | StringSelectMenuInteraction<"cached" | "raw" | undefined> | UserSelectMenuInteraction<"cached" | "raw" | undefined> | RoleSelectMenuInteraction<"cached" | "raw" | undefined> | MentionableSelectMenuInteraction<"cached" | "raw" | undefined> | ChannelSelectMenuInteraction<"cached" | "raw" | undefined> | ButtonInteraction<CacheType> | AutocompleteInteraction<CacheType> | ModalSubmitInteraction<CacheType>) => Promise<void>;
