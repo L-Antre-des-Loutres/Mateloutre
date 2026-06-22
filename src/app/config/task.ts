@@ -32,8 +32,16 @@ import * as fs from "node:fs";
 import path from "path";
 import {fetchPokeNews} from "../scraper/pokeNewsScraper";
 import {TextChannel, EmbedBuilder, ColorResolvable} from "discord.js";
+import {OtterCache} from "../../otterbots/utils/ottercache/ottercache";
+import {POKEDLE_CONSTANTS} from "../utils/pokedle/constants";
 
 const CACHE_FILE = path.join(__dirname, '../../../cache/pokekalos-latest-news.cache');
+
+/**
+ * Cache partagé du Pokedle — doit correspondre au même fichier que dans pokedle.ts.
+ * On l'instancie ici pour pouvoir le vider via la tâche planifiée.
+ */
+const pokedleTaskCache = new OtterCache<unknown>(POKEDLE_CONSTANTS.CACHE_FILE_NAME);
 
 /**
  * Represents a list of scheduled tasks with their respective configurations.
@@ -43,7 +51,8 @@ const CACHE_FILE = path.join(__dirname, '../../../cache/pokekalos-latest-news.ca
  * - `task`: An asynchronous function to be executed at the specified time.
  */
 export const tasks = [
-    {name: "Pokekalos News Scraper", time: "*/15 * * * *", task: async () => scrapeNews(), period: ""}
+    { name: "Pokekalos News Scraper",    time: "*/15 * * * *", task: async () => scrapeNews(),          period: "" },
+    { name: "Pokedle Cache Weekly Clear", time: "0 0 * * 0",   task: async () => clearPokedleCache(),   period: "" },
 ];
 
 
@@ -112,6 +121,12 @@ export async function scrapeNews() {
     }
 }
 
-
-
-
+/**
+ * Vide le cache des sessions Pokedle.
+ * Planifié tous les dimanches à minuit pour repartir sur une semaine propre.
+ */
+export async function clearPokedleCache(): Promise<void> {
+    const sizeBefore = pokedleTaskCache.size();
+    pokedleTaskCache.clear();
+    otterlogs.log(`🧹 Cache Pokedle vidé : ${sizeBefore} session(s) supprimée(s).`);
+}
