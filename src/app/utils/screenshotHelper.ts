@@ -45,12 +45,15 @@ export function buildPlatformChoices(
 export async function findDiscordUserRecordId(discordId: string): Promise<string | undefined> {
     try {
         const pb = await OtterPocketBase.getClient();
-        const record = await pb
+        const result = await pb
             .collection(DISCORD_USERS_COLLECTION)
-            .getFirstListItem(`discord_id="${discordId}"`);
-        return record.id;
+            .getList(1, 1, { filter: `discord_id="${discordId}"` });
+        if (result.items.length === 0) {
+            return undefined;
+        }
+        return result.items[0].id;
     } catch (error) {
-        otterlogs.warn(`screenshot: no discord_users record for discord_id=${discordId}: ${error}`);
+        otterlogs.warn(`screenshot: erreur lors de la recherche discord_users pour discord_id=${discordId}: ${error}`);
         return undefined;
     }
 }
