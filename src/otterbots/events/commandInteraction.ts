@@ -4,6 +4,7 @@ import {
     Client,
     ButtonInteraction,
     EmbedBuilder,
+    MessageFlags,
 } from "discord.js";
 import {otterlogs} from "../utils/otterlogs";
 import {SlashCommand} from "../types";
@@ -33,7 +34,7 @@ export async function otterBots_interactionCreate(client: Client): Promise<void>
             if (!parsed) return; // Not a screenshot moderation button
 
             const buttonInteraction = interaction as ButtonInteraction;
-            await buttonInteraction.deferReply({ ephemeral: true });
+            await buttonInteraction.deferReply({ flags: MessageFlags.Ephemeral });
 
             const messageRef = parseMessageRef(buttonInteraction.message.embeds[0]?.url);
             if (!messageRef) {
@@ -100,11 +101,12 @@ export async function otterBots_interactionCreate(client: Client): Promise<void>
                 await (command.autocomplete as (i: AutocompleteInteraction) => Promise<unknown>)(interaction as AutocompleteInteraction);
             } catch (error) {
                 otterlogs.error(`Error during autocomplete for ${interaction.commandName}: ${error}`);
+                // L'interaction autocomplete peut déjà être expirée : on ignore l'erreur de réponse
                 try {
-                    await interaction.respond([
-                        { name: "⚠️ Erreur lors de l’autocomplétion", value: "error" },
-                    ]);
-                } catch {}
+                    if (!interaction.responded) {
+                        await interaction.respond([]);
+                    }
+                } catch { /* interaction expirée ou déjà acquittée, rien à faire */ }
             }
             return;
         }
@@ -123,14 +125,17 @@ export async function otterBots_interactionCreate(client: Client): Promise<void>
             otterlogs.error(`Error executing command ${interaction.commandName}: ${error}`);
 
             const replyMessage = interaction.replied || interaction.deferred
-                ? '🦦 Oups! Une loutre a fait tomber le serveur dans l’eau! La commande n’a pas pu être exécutée.'
+                ? '🦦 Oups! Une loutre a fait tomber le serveur dans l\'eau! La commande n\'a pas pu être exécutée.'
                 : '🦦 La loutre responsable de cette commande est partie faire la sieste! Réessayez plus tard.';
 
-            if (interaction.replied || interaction.deferred) {
-                await interaction.followUp({ content: replyMessage, ephemeral: true });
-            } else {
-                await interaction.reply({ content: replyMessage, ephemeral: true });
-            }
+            // L'interaction peut être expirée (10062) ou déjà acquittée (40060) : on ignore l'erreur de réponse
+            try {
+                if (interaction.replied || interaction.deferred) {
+                    await interaction.followUp({ content: replyMessage, flags: MessageFlags.Ephemeral });
+                } else {
+                    await interaction.reply({ content: replyMessage, flags: MessageFlags.Ephemeral });
+                }
+            } catch { /* interaction expirée ou déjà acquittée, rien à faire */ }
         }
     });
 }

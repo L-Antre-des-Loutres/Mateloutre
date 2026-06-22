@@ -5,6 +5,7 @@ import {
     ButtonStyle,
     ChatInputCommandInteraction,
     EmbedBuilder,
+    MessageFlags,
     SlashCommandBuilder,
     TextChannel,
 } from "discord.js";
@@ -93,7 +94,7 @@ export default {
 
     async execute(interaction: ChatInputCommandInteraction): Promise<void> {
         if (!interaction.inGuild()) {
-            await interaction.reply({ content: STRINGS.replies.guildOnly, ephemeral: true });
+            await interaction.reply({ content: STRINGS.replies.guildOnly, flags: MessageFlags.Ephemeral });
             return;
         }
 
@@ -101,7 +102,7 @@ export default {
         const image = interaction.options.getAttachment(STRINGS.options.image.name, true);
         const titre = interaction.options.getString(STRINGS.options.titre.name) ?? "";
 
-        await interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
         if (!image.contentType?.startsWith("image/")) {
             await interaction.editReply(STRINGS.replies.notImage);

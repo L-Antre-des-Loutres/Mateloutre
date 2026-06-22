@@ -9,7 +9,8 @@ import {
     TextBasedChannel,
     Message,
     MessagePayload,
-    MessageCreateOptions
+    MessageCreateOptions,
+    MessageFlags,
 } from "discord.js";
 import { SlashCommand } from "../../otterbots/types";
 import { generatePokedleImage } from "../utils/pokedle/imageGenerator";
@@ -17,6 +18,7 @@ import { OtterCache } from "../../otterbots/utils/ottercache/ottercache";
 import { POKEDLE_CONSTANTS } from "../utils/pokedle/constants";
 import { PapiService } from "../utils/papi/papiService";
 import { PokemonData } from "../utils/pokedle/gameLogic";
+import { PokedleStatsService } from "../utils/pokedle/mateloutreDleStats";
 
 export interface PokedleSession {
     attemptsIds: number[];
@@ -109,7 +111,7 @@ export default {
         const isFirstGuess = attemptsIds.length === 0 && subcommand === POKEDLE_CONSTANTS.SUBCOMMAND_GUESS_NAME;
 
         // Le premier essai est un message public. Les essais suivants ou la vue sont éphémères.
-        await interaction.deferReply({ ephemeral: !isFirstGuess });
+        await interaction.deferReply({ flags: !isFirstGuess ? MessageFlags.Ephemeral : undefined });
 
         const pokemonList = await PapiService.getAllPokemonForPokedle();
         if (pokemonList.length === 0) {
@@ -183,6 +185,8 @@ export default {
                         .replace("{target}", targetPokemon.name)
                         .replace("{attempts}", attemptsIds.length.toString()) 
                 });
+                // Enregistrement de la victoire dans PocketBase
+                await PokedleStatsService.saveWin(userId, attemptsIds.length, targetPokemon.name);
             }
 
             if (isFirstGuess) {
@@ -257,7 +261,31 @@ export default {
             await interaction.editReply({ embeds: [embed], files: [attachment] });
 
         } else if (subcommand === POKEDLE_CONSTANTS.SUBCOMMAND_STATS_NAME) {
-            await interaction.editReply({ content: POKEDLE_CONSTANTS.MSG_STATS_COMING });
+            const stats = await PokedleStatsService.getStatsForUser(userId);
+
+            if (stats.length === 0) {
+                await interaction.editReply({ content: "Tu n'as encore aucune victoire enregistrée au Pokedle. Lance-toi avec `/pokedle guess` !" });
+                return;
+            }
+
+            const totalWins    = stats.length;
+            const bestTry      = Math.min(...stats.map(s => s.nb_try));
+            const averageTries = (stats.reduce((acc, s) => acc + s.nb_try, 0) / totalWins).toFixed(1);
+            const lastWin      = stats[0]; // déjà trié par -created
+            const lastWinDate  = new Date(lastWin.created).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+
+            const embed = new EmbedBuilder()
+                .setTitle(`📊 Stats Pokedle de ${displayName}`)
+                .setColor((process.env.BOT_COLOR || "#FFFFFF") as ColorResolvable)
+                .addFields(
+                    { name: '🏆 Victoires totales',   value: `**${totalWins}**`,          inline: true },
+                    { name: '⚡ Meilleur score',       value: `**${bestTry}** essai(s)`,   inline: true },
+                    { name: '📈 Moyenne',              value: `**${averageTries}** essais`, inline: true },
+                    { name: '🕐 Dernière victoire',    value: `**${lastWin.pokemon_name}** le ${lastWinDate} en **${lastWin.nb_try}** essai(s)`, inline: false },
+                )
+                .setFooter({ text: 'Seules les victoires sont comptabilisées.' });
+
+            await interaction.editReply({ embeds: [embed] });
         }
     }
 } as SlashCommand;

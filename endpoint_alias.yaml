@@ -7,3 +7,9 @@ aliases:
     action: "getFullList"
     options:
       requestKey: null
+  - alias: "pokedle_stats_create"
+    collection: "mateloutre_dle_stats"
+    action: "create"
+  - alias: "pokedle_stats_getByUser"
+    collection: "mateloutre_dle_stats"
+    action: "getFullList"
