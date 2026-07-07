@@ -9,7 +9,7 @@ export default {
         .setDescription("Obtiens le lien du dépôt GitHub du bot."),
     async execute(interaction: ChatInputCommandInteraction): Promise<void> {
         // Récupération de BOT_COLOR et VERSION depuis .env
-        const bot_color = process.env.BOT_COLOR || "#FFFFFF";
+        const bot_color = process.env.BOT_COLOR || "#f89800";
         const version = process.env.VERSION || "0.0.0";
         const name = process.env.BOT_NAME || "Otterbots";
         const git_repo = process.env.GIT_REPOSITORY || "https://github.com/AntreDesLoutres/Otterbots";

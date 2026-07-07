@@ -98,7 +98,7 @@ export async function scrapeNews() {
                 .setURL(article.link)
                 .setDescription(`${article.description}\n🔗 [Lire l'article](${article.link})`)
                 .setImage(article.image)
-                .setColor((process.env.BOT_COLOR || "#FFFFFF") as ColorResolvable)
+                .setColor((process.env.BOT_COLOR || "#f89800") as ColorResolvable)
                 .setFields(
                     { name: 'Source', value: 'Pokekalos', inline: true },
                     { name: 'Date', value: article.date, inline: true }

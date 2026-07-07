@@ -9,7 +9,7 @@ export const DEPRECATED_MARKER = "depreciated";
 export const ANTRE_BASE_URL = "https://antredesloutres.fr";
 export const MANAGED_GAMES_WILDCARD = "*";
 export const AUTOCOMPLETE_LIMIT = 25;
-export const DEFAULT_EMBED_COLOR = 0x57F287;
+export const DEFAULT_EMBED_COLOR = (process.env.BOT_COLOR || "#f89800") as unknown as number;
 
 /**
  * Returns the list of games this bot manages, parsed from GAMES_MANAGED env.
