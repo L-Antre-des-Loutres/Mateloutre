@@ -38,7 +38,7 @@ import {POKEDLE_CONSTANTS} from "../utils/pokedle/constants";
 const CACHE_FILE = path.join(__dirname, '../../../cache/pokekalos-latest-news.cache');
 
 /**
- * Cache partagé du Pokedle — doit correspondre au même fichier que dans pokedle.ts.
+ * Cache partagé du Pokedle — doit correspondre au même fichier que dans pokedeviner.ts.
  * On l'instancie ici pour pouvoir le vider via la tâche planifiée.
  */
 const pokedleTaskCache = new OtterCache<unknown>(POKEDLE_CONSTANTS.CACHE_FILE_NAME);
