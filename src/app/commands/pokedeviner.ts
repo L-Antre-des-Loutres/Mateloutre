@@ -24,11 +24,17 @@ export interface PokedleSession {
     attemptsIds: number[];
     messageId?: string;
     channelId?: string;
+    pbRecordId?: string; // ID of the PocketBase record
+    targetPokemonId?: number;
+}
+
+export interface PokedleDailyState {
+    currentGameId: number;
 }
 
 type SendableChannel = TextBasedChannel & { send(options: string | MessagePayload | MessageCreateOptions): Promise<Message> };
 
-const pokedleCache = new OtterCache<PokedleSession | number[]>(POKEDLE_CONSTANTS.CACHE_FILE_NAME);
+const pokedleCache = new OtterCache<PokedleSession | number[] | PokedleDailyState>(POKEDLE_CONSTANTS.CACHE_FILE_NAME);
 
 export default {
     name: POKEDLE_CONSTANTS.COMMAND_NAME,
@@ -55,15 +61,19 @@ export default {
         ) as SlashCommandBuilder,
 
     async autocomplete(interaction: AutocompleteInteraction): Promise<void> {
-        const pokemonList = await PapiService.getAllPokemonForPokedle();
+        // Use cached pokemon for autocomplete to avoid DiscordAPIError[10062] timeout
+        const pokemonList = PapiService.getCachedPokemonForPokedle();
+        if (!pokemonList || pokemonList.length === 0) {
+            await interaction.respond([]);
+            return;
+        }
+
         const focusedValue = interaction.options.getFocused().toLowerCase();
         
         let choices: PokemonData[];
         if (focusedValue === "") {
-            // Ordre du Pokédex par défaut (déjà trié par ID dans PapiService)
             choices = pokemonList.slice(0, 25);
         } else {
-            // Tri par pertinence/lettre quand on commence à taper
             choices = pokemonList
                 .filter(p => p.name.toLowerCase().includes(focusedValue))
                 .sort((a, b) => {
@@ -75,7 +85,6 @@ export default {
                     if (aStarts && !bStarts) return -1;
                     if (!aStarts && bStarts) return 1;
                     
-                    // Si les deux commencent pareil ou ne commencent pas par la lettre, tri alphabétique
                     return aName.localeCompare(bName);
                 })
                 .slice(0, 25);
@@ -91,12 +100,18 @@ export default {
         const userId = interaction.user.id;
         const now = new Date();
         
-        // Utilisation de la date locale (YYYY-MM-DD) pour un reset à minuit heure locale du serveur
         const todayISO = now.toLocaleDateString('en-CA'); 
         const todayFR = now.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
-        const cacheKey = `${userId}_${todayISO}`;
+        
+        const dailyStateKey = `dailyState_${userId}_${todayISO}`;
+        const dailyState: PokedleDailyState = (pokedleCache.get(dailyStateKey) as PokedleDailyState) || { currentGameId: 0 };
+        
+        // Backward compatibility for old cache key
+        let cacheKey = `session_${userId}_${todayISO}_${dailyState.currentGameId}`;
+        if (dailyState.currentGameId === 0 && pokedleCache.get(`${userId}_${todayISO}`)) {
+            cacheKey = `${userId}_${todayISO}`;
+        }
 
-        // Récupération ou initialisation de la session (gestion rétrocompatibilité de l'ancien cache)
         const sessionRaw = pokedleCache.get(cacheKey);
         let session: PokedleSession = { attemptsIds: [] };
         if (sessionRaw) {
@@ -110,7 +125,6 @@ export default {
         const attemptsIds = session.attemptsIds;
         const isFirstGuess = attemptsIds.length === 0 && subcommand === POKEDLE_CONSTANTS.SUBCOMMAND_GUESS_NAME;
 
-        // Le premier essai est un message public. Les essais suivants ou la vue sont éphémères.
         await interaction.deferReply({ flags: !isFirstGuess ? MessageFlags.Ephemeral : undefined });
 
         const pokemonList = await PapiService.getAllPokemonForPokedle();
@@ -119,18 +133,25 @@ export default {
             return;
         }
 
-        // Algorithme de hachage plus robuste pour le Pokémon du jour (basé sur sdbm)
-        // On inclut l'ID de l'utilisateur pour que chaque joueur ait un Pokémon différent
-        const getDailyIndex = (seed: string, max: number) => {
-            let hash = 0;
-            for (let i = 0; i < seed.length; i++) {
-                hash = seed.charCodeAt(i) + (hash << 6) + (hash << 16) - hash;
-            }
-            return Math.abs(hash) % max;
-        };
+        if (!session.targetPokemonId) {
+            const getDailyIndex = (seed: string, max: number) => {
+                let hash = 0;
+                for (let i = 0; i < seed.length; i++) {
+                    hash = seed.charCodeAt(i) + (hash << 6) + (hash << 16) - hash;
+                }
+                return Math.abs(hash) % max;
+            };
 
-        const targetIndex = getDailyIndex(`${todayISO}_${userId}`, pokemonList.length);
-        const targetPokemon = pokemonList[targetIndex];
+            const targetIndex = getDailyIndex(`${todayISO}_${userId}_${dailyState.currentGameId}`, pokemonList.length);
+            session.targetPokemonId = pokemonList[targetIndex].id;
+            
+            // On le sauvegarde immediatement si on ne va pas set la session plus bas.
+            if (subcommand !== POKEDLE_CONSTANTS.SUBCOMMAND_GUESS_NAME) {
+                pokedleCache.set(cacheKey, session);
+            }
+        }
+
+        const targetPokemon = pokemonList.find(p => p.id === session.targetPokemonId)!;
 
         const displayName = interaction.member instanceof GuildMember 
             ? interaction.member.displayName 
@@ -145,7 +166,6 @@ export default {
                 return;
             }
 
-            // Si déjà gagné, afficher le tableau de victoire et arrêter
             if (attemptsIds.includes(targetPokemon.id)) {
                 const msgLink = session.messageId && session.channelId ? `\n[Voir ton Pokedle public](https://discord.com/channels/${interaction.guildId}/${session.channelId}/${session.messageId})` : "";
                 await interaction.editReply({ content: POKEDLE_CONSTANTS.MSG_ALREADY_WON.replace("{target}", targetPokemon.name) + msgLink });
@@ -162,6 +182,13 @@ export default {
 
             const isWin = guessPokemon.id === targetPokemon.id;
             
+            // Sync with PocketBase
+            const tryListNames = attemptsIds.map(id => pokemonList.find(p => p.id === id)?.name).filter(Boolean) as string[];
+            const pbRecordId = await PokedleStatsService.syncGame(userId, targetPokemon.name, tryListNames, isWin, session.pbRecordId);
+            if (pbRecordId) {
+                session.pbRecordId = pbRecordId;
+            }
+
             // Génération de l'image
             const attemptsPokemon = attemptsIds.map(id => pokemonList.find(p => p.id === id)!);
             const avatarUrl = interaction.user.displayAvatarURL({ extension: 'png', size: 128 });
@@ -179,21 +206,32 @@ export default {
                 });
 
             if (isWin) {
+                let winText = `Tu as trouvé **${targetPokemon.name}** en **${attemptsIds.length}** essais !`;
+                if (dailyState.currentGameId === 0) {
+                    winText += `\n\n🎁 **Points quotidiens obtenus !**\nTu peux continuer à jouer avec \`/pokedeviner deviner\`, mais tu devras revenir demain pour obtenir de nouveaux points.`;
+                } else {
+                    winText += `\n\n*(Partie supplémentaire : aucun point accordé, reviens demain !)*`;
+                }
+                
                 embed.addFields({ 
                     name: POKEDLE_CONSTANTS.MSG_WIN_TITLE, 
-                    value: POKEDLE_CONSTANTS.MSG_WIN_CONTENT
-                        .replace("{target}", targetPokemon.name)
-                        .replace("{attempts}", attemptsIds.length.toString()) 
+                    value: winText
                 });
-                // Enregistrement de la victoire dans PocketBase
-                await PokedleStatsService.saveWin(userId, attemptsIds.length, targetPokemon.name);
+                
+                // Increment game id for the NEXT game
+                dailyState.currentGameId++;
+                pokedleCache.set(dailyStateKey, dailyState);
             }
 
             if (isFirstGuess) {
                 const msg = await interaction.editReply({ embeds: [embed], files: [attachment] });
                 session.messageId = msg.id;
                 session.channelId = msg.channelId;
-                pokedleCache.set(cacheKey, session);
+                if (isWin) {
+                    pokedleCache.delete(cacheKey);
+                } else {
+                    pokedleCache.set(cacheKey, session);
+                }
             } else {
                 let edited = false;
                 let msgLink = "";
@@ -214,7 +252,11 @@ export default {
                     }
                 }
 
-                pokedleCache.set(cacheKey, session);
+                if (isWin) {
+                    pokedleCache.delete(cacheKey);
+                } else {
+                    pokedleCache.set(cacheKey, session);
+                }
 
                 if (edited) {
                     if (isWin) {
@@ -289,4 +331,5 @@ export default {
         }
     }
 } as SlashCommand;
+
 

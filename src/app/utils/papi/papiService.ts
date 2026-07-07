@@ -9,17 +9,28 @@ import {
 } from './types/pokemon';
 import { PokemonData } from '../pokedle/gameLogic';
 
+import { OtterCache } from '../../../otterbots/utils/ottercache/ottercache';
+
 export class PapiService {
-    private static pokemonCache: PokemonData[] | null = null;
+    private static diskCache = new OtterCache<PokemonData[]>('papi_pokemon_cache.json');
     private static typeCache: Map<number, string> = new Map();
+
+    /**
+     * Gets the currently cached Pokemon without triggering a fetch.
+     * Useful for commands that must return synchronously (like Autocomplete).
+     */
+    static getCachedPokemonForPokedle(): PokemonData[] | null {
+        return this.diskCache.get('pokemonList');
+    }
 
     /**
      * Fetches all pokemon and their French translations, then maps them to PokemonData.
      * Uses a cache to avoid repeated heavy API calls.
      */
     static async getAllPokemonForPokedle(forceRefresh = false): Promise<PokemonData[]> {
-        if (this.pokemonCache && !forceRefresh) {
-            return this.pokemonCache;
+        const cached = this.diskCache.get('pokemonList');
+        if (cached && !forceRefresh) {
+            return cached;
         }
 
         try {
@@ -77,11 +88,12 @@ export class PapiService {
                 pokemonDataList.push(...results);
             }
 
-            this.pokemonCache = pokemonDataList.filter((p): p is PokemonData => p !== null);
-            return this.pokemonCache;
+            const validPokemon = pokemonDataList.filter((p): p is PokemonData => p !== null);
+            this.diskCache.set('pokemonList', validPokemon);
+            return validPokemon;
         } catch (error) {
             console.error('Error fetching pokemon from PAPI:', error);
-            return this.pokemonCache || [];
+            return this.diskCache.get('pokemonList') || [];
         }
     }
 
