@@ -3,6 +3,7 @@ import { OtterPocketBase } from "../../otterbots/utils/pocketbase/pocketbase";
 import { otterlogs } from "../../otterbots/utils/otterlogs";
 import { AUTOCOMPLETE_LIMIT, isManagedGameName } from "./serverHelper";
 import { Platform } from "../types/serverType";
+import { DiscordUserRecord } from "../types/discordUser";
 
 export const PLATFORMS_ALIAS = "get_platforms";
 export const SCREENSHOTS_COLLECTION = "player_screenshots";
@@ -47,9 +48,15 @@ export async function findDiscordUserRecordId(discordId: string): Promise<string
         const pb = await OtterPocketBase.getClient();
         const result = await pb
             .collection(DISCORD_USERS_COLLECTION)
-            .getList(1, 1, { filter: `discord_id="${discordId}"` });
+            .getList<DiscordUserRecord>(1, 1, { filter: `discord_id="${discordId}"` });
         if (result.items.length === 0) {
-            return undefined;
+            try {
+                const newRecord = await pb.collection(DISCORD_USERS_COLLECTION).create<DiscordUserRecord>({ discord_id: discordId });
+                return newRecord.id;
+            } catch (createError) {
+                otterlogs.warn(`screenshot: impossible de créer l'utilisateur discord_id=${discordId}: ${createError}`);
+                return undefined;
+            }
         }
         return result.items[0].id;
     } catch (error) {
