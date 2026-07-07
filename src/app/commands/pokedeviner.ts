@@ -170,7 +170,7 @@ export default {
 
             const embed = new EmbedBuilder()
                 .setTitle(POKEDLE_CONSTANTS.EMBED_TITLE.replace("{date}", todayFR))
-                .setColor((process.env.BOT_COLOR || "#FFFFFF") as ColorResolvable)
+                .setColor((process.env.BOT_COLOR || "#f89800") as ColorResolvable)
                 .setImage(`attachment://${POKEDLE_CONSTANTS.RESULT_IMAGE_NAME}`)
                 .setFooter({ 
                     text: isWin 
@@ -246,7 +246,7 @@ export default {
 
             const embed = new EmbedBuilder()
                 .setTitle(POKEDLE_CONSTANTS.EMBED_TITLE.replace("{date}", todayFR))
-                .setColor((process.env.BOT_COLOR || "#FFFFFF") as ColorResolvable)
+                .setColor((process.env.BOT_COLOR || "#f89800") as ColorResolvable)
                 .setImage(`attachment://${POKEDLE_CONSTANTS.RESULT_IMAGE_NAME}`)
                 .setFooter({ 
                     text: isWon 
@@ -276,7 +276,7 @@ export default {
 
             const embed = new EmbedBuilder()
                 .setTitle(`📊 Stats Pokedle de ${displayName}`)
-                .setColor((process.env.BOT_COLOR || "#FFFFFF") as ColorResolvable)
+                .setColor((process.env.BOT_COLOR || "#f89800") as ColorResolvable)
                 .addFields(
                     { name: '🏆 Victoires totales',   value: `**${totalWins}**`,          inline: true },
                     { name: '⚡ Meilleur score',       value: `**${bestTry}** essai(s)`,   inline: true },
