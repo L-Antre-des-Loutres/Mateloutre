@@ -5,8 +5,8 @@ export const POKEDLE_CONSTANTS = {
     RESULT_IMAGE_NAME: "pokedle-result.png",
 
     // Commands and Subcommands
-    COMMAND_NAME: "pokedle",
-    COMMAND_DESCRIPTION: "Joue au Pokémon DLE quotidien !",
+    COMMAND_NAME: "pokedeviner",
+    COMMAND_DESCRIPTION: "Joue au Pokémon Deviner quotidien !",
     SUBCOMMAND_GUESS_NAME: "deviner",
     SUBCOMMAND_GUESS_DESCRIPTION: "Devine le Pokémon du jour",
     SUBCOMMAND_VIEW_NAME: "voir",

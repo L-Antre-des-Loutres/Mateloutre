@@ -37,6 +37,7 @@ export class OtterPocketBase {
             }
 
             OtterPocketBase.pb = new PocketBase(url);
+            OtterPocketBase.pb.autoCancellation(false);
 
             if (email && password) {
                 try {
