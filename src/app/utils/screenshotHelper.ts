@@ -53,9 +53,12 @@ export async function findDiscordUserRecordId(discordId: string): Promise<string
                 .getList<DiscordUserRecord>(1, 1, { filter: `discord_id="${discordId}"`, requestKey: null });
             break; // Success
         } catch (error: unknown) {
-            if (error && typeof error === 'object' && 'status' in error && error.status === 0 && attempts < 2) {
-                otterlogs.warn(`screenshot: Fetch failed (Error 0) for discord_id=${discordId}, retrying...`);
-                continue;
+            if (error && typeof error === 'object' && 'status' in error && error.status === 0) {
+                const original = (error as Record<string, unknown>).originalError as Error | undefined;
+                otterlogs.warn(`screenshot: Fetch failed (Error 0) for discord_id=${discordId}. Attempt: ${attempts}. Original Error: ${original ? original.message || original : 'unknown'}`);
+                if (attempts < 2) {
+                    continue;
+                }
             }
             otterlogs.warn(`screenshot: erreur lors de la recherche discord_users pour discord_id=${discordId}: ${error}`);
             return undefined;

@@ -39,6 +39,12 @@ export class OtterPocketBase {
             OtterPocketBase.pb = new PocketBase(url);
             OtterPocketBase.pb.autoCancellation(false);
 
+            // Désactivation du keep-alive pour Node 18 fetch afin d'éviter les ClientResponseError 0 aléatoires
+            OtterPocketBase.pb.beforeSend = function (reqUrl, options) {
+                options.headers = Object.assign({}, options.headers, { "Connection": "close" });
+                return { url: reqUrl, options };
+            };
+
             if (email && password) {
                 try {
                     // Exclusive authentication via the '_superusers' collection (PocketBase v0.23+)
