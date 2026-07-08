@@ -26,9 +26,9 @@ export const POKEDLE_CONSTANTS = {
     MSG_ERROR_AUTOCOMPLETE: "⚠️ Erreur lors de l’autocomplétion",
     
     // Embed and Image Labels
-    EMBED_TITLE: "MateloutreDLE - {date}",
-    IMAGE_TITLE: "MateloutreDLE de {username}",
-    IMAGE_DEFAULT_TITLE: "Pokémon DLE",
+    EMBED_TITLE: "PokeDeviner - {date}",
+    IMAGE_TITLE: "PokeDeviner de {username}",
+    IMAGE_DEFAULT_TITLE: "PokeDeviner",
     FOOTER_TEXT: "Essai {count} • 🟩 Bon • 🟨 Mal placé • 🟥 Mauvais • 🔼 Plus grand • 🔽 Plus petit",
     FOOTER_WON_TEXT: "Partie terminée en {count} essais",
     
