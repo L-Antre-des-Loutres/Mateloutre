@@ -39,23 +39,59 @@ export class OtterPocketBase {
             OtterPocketBase.pb = new PocketBase(url);
             OtterPocketBase.pb.autoCancellation(false);
 
-            // Désactivation du keep-alive pour Node 18 fetch afin d'éviter les ClientResponseError 0 aléatoires
+            // Désactivation du keep-alive pour Node 18 fetch
             OtterPocketBase.pb.beforeSend = function (reqUrl, options) {
                 options.headers = Object.assign({}, options.headers, { "Connection": "close" });
                 return { url: reqUrl, options };
             };
 
-            if (email && password) {
-                try {
-                    // Exclusive authentication via the '_superusers' collection (PocketBase v0.23+)
+            const authenticate = async () => {
+                if (email && password) {
                     await OtterPocketBase.pb.collection('_superusers').authWithPassword(email, password);
-                    otterlogs.debug("OtterPocketBase: Successfully initialized via _superusers!");
-                } catch (error) {
-                    otterlogs.error(`OtterPocketBase: Authentication failed (_superusers): ${error}`);
                 }
-            } else {
-                otterlogs.debug("OtterPocketBase: Initialized in guest mode.");
+            };
+
+            // Authentification initiale
+            try {
+                await authenticate();
+                otterlogs.debug("OtterPocketBase: Successfully initialized via _superusers!");
+            } catch (error) {
+                otterlogs.error(`OtterPocketBase: Authentication failed (_superusers): ${error}`);
             }
+
+            // Wrapping global de pb.send pour gérer les erreurs réseau (0) et les expirations de token (401)
+            const originalSend = OtterPocketBase.pb.send.bind(OtterPocketBase.pb);
+            OtterPocketBase.pb.send = async function (path: string, options: Record<string, unknown>) {
+                let lastError: unknown;
+                // Jusqu'à 3 tentatives (1 initiale + 2 retries)
+                for (let i = 0; i < 3; i++) {
+                    try {
+                        return await originalSend(path, options);
+                    } catch (err: unknown) {
+                        lastError = err;
+                        
+                        if (err && typeof err === 'object' && 'status' in err && err.status === 0) {
+                            otterlogs.warn(`OtterPocketBase: Network error 0 on ${path} (attempt ${i + 1}/3). Retrying in ${500 * (i + 1)}ms...`);
+                            await new Promise(resolve => setTimeout(resolve, 500 * (i + 1)));
+                            continue;
+                        }
+                        
+                        if (err && typeof err === 'object' && 'status' in err && err.status === 401 && email && password) {
+                            otterlogs.warn(`OtterPocketBase: Token expired (401) on ${path}. Re-authenticating...`);
+                            try {
+                                await authenticate();
+                            } catch {
+                                otterlogs.error("OtterPocketBase: Re-authentication failed.");
+                            }
+                            continue;
+                        }
+                        
+                        throw err;
+                    }
+                }
+                throw lastError;
+            };
+
         } catch (error) {
             otterlogs.error(`OtterPocketBase: Error during initialization: ${error}`);
         }
