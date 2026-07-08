@@ -57,9 +57,20 @@ export class PokedleStatsService {
             }
 
             if (pbRecordId) {
-                await pb.collection('pokedeviner_stats').update(pbRecordId, payload);
-                return pbRecordId;
-            } else {
+                try {
+                    await pb.collection('pokedeviner_stats').update(pbRecordId, payload);
+                    return pbRecordId;
+                } catch (updateError: unknown) {
+                    if (updateError && typeof updateError === 'object' && 'status' in updateError && updateError.status === 404) {
+                        otterlogs.warn(`PokedleStatsService: Partie ${pbRecordId} introuvable (404). Recréation d'une nouvelle ligne.`);
+                        pbRecordId = undefined; // Force la création
+                    } else {
+                        throw updateError;
+                    }
+                }
+            }
+
+            if (!pbRecordId) {
                 payload.start_at = now.toISOString();
                 const record = await pb.collection('pokedeviner_stats').create(payload);
                 otterlogs.debug(`PokedleStatsService: Nouvelle partie créée pour ${discordUserId} (ID: ${record.id}).`);
