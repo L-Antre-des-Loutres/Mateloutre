@@ -27,14 +27,10 @@ export class OtterPocketBase {
             const fileContents = fs.readFileSync(OtterPocketBase.configPath, 'utf8');
             OtterPocketBase.config = yaml.load(fileContents) as PocketBaseConfig;
 
-            const url = process.env.PB_URL;
+            // L'utilisateur demande de forcer l'URL externe pour éviter les problèmes de réseau interne (Docker/localhost)
+            const url = "https://pocketbase.antredesloutres.fr";
             const email = process.env.PB_EMAIL;
             const password = process.env.PB_PASSWORD;
-
-            if (!url) {
-                otterlogs.error("OtterPocketBase: PocketBase URL (PB_URL) missing in .env.");
-                return;
-            }
 
             OtterPocketBase.pb = new PocketBase(url);
             OtterPocketBase.pb.autoCancellation(false);
