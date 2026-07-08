@@ -34,6 +34,7 @@ import {fetchPokeNews} from "../scraper/pokeNewsScraper";
 import {TextChannel, EmbedBuilder, ColorResolvable} from "discord.js";
 import {OtterCache} from "../../otterbots/utils/ottercache/ottercache";
 import {POKEDLE_CONSTANTS} from "../utils/pokedle/constants";
+import {PokedleReminderService} from "../utils/pokedle/pokedleReminderCache";
 
 const CACHE_FILE = path.join(__dirname, '../../../cache/pokekalos-latest-news.cache');
 
@@ -52,11 +53,32 @@ const pokedleTaskCache = new OtterCache<unknown>(POKEDLE_CONSTANTS.CACHE_FILE_NA
  */
 export const tasks = [
     { name: "Pokekalos News Scraper",    time: "*/15 * * * *", task: async () => scrapeNews(),          period: "" },
+    { name: "Pokedle Reminders Check",   time: "*/15 * * * *", task: async () => processPokedleReminders(), period: "" },
     { name: "Pokedle Cache Weekly Clear", time: "0 0 * * 0",   task: async () => clearPokedleCache(),   period: "" },
 ];
 
+export async function processPokedleReminders() {
+    try {
+        const dueReminders = PokedleReminderService.getDueReminders();
+        if (dueReminders.length === 0) return;
 
-
+        for (const reminder of dueReminders) {
+            try {
+                const user = await clientGatewayIntent.users.fetch(reminder.userId);
+                if (user) {
+                    await user.send("🦦 **Coucou !** Ça fait 24 heures ! Le nouveau Pokémon de la journée est disponible. Reviens jouer avec `/pokedeviner deviner` sur le serveur pour gagner tes points aujourd'hui !");
+                    otterlogs.log(`Pokedle Reminder envoyé à ${user.tag}`);
+                }
+            } catch (e) {
+                otterlogs.warn(`Impossible d'envoyer le Pokedle Reminder à l'utilisateur ${reminder.userId} (DM fermés ?) : ${e}`);
+            }
+            // Remove reminder to avoid spam loops
+            PokedleReminderService.removeReminder(reminder.userId);
+        }
+    } catch (error) {
+        otterlogs.error(`Erreur lors du traitement des rappels Pokedle: ${error}`);
+    }
+}
 
 // Function to be executed at the scheduled time
 export async function scrapeNews() {

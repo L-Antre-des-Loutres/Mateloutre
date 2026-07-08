@@ -19,6 +19,7 @@ import {
     VALIDATED_COLOR,
     REFUSED_COLOR,
 } from "../../app/utils/screenshotHelper";
+import { PokedleReminderService } from "../../app/utils/pokedle/pokedleReminderCache";
 
 /**
  * Handles interaction events for chat input commands and executes the appropriate command logic.
@@ -30,6 +31,13 @@ export async function otterBots_interactionCreate(client: Client): Promise<void>
     client.on("interactionCreate", async (interaction) => {
 
         if (interaction.isButton()) {
+            if (interaction.customId === 'pokedle_reminder_btn') {
+                await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+                PokedleReminderService.addReminder(interaction.user.id);
+                await interaction.editReply("C'est noté ! Je t'enverrai un Message Privé dans 24 heures pour ton prochain Pokedle. 🕰️");
+                return;
+            }
+
             const parsed = parseCustomId(interaction.customId);
             if (!parsed) return; // Not a screenshot moderation button
 

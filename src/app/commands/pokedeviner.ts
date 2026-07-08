@@ -11,6 +11,9 @@ import {
     MessagePayload,
     MessageCreateOptions,
     MessageFlags,
+    ActionRowBuilder,
+    ButtonBuilder,
+    ButtonStyle,
 } from "discord.js";
 import { SlashCommand } from "../../otterbots/types";
 import { generatePokedleImage } from "../utils/pokedle/imageGenerator";
@@ -223,8 +226,20 @@ export default {
                 pokedleCache.set(dailyStateKey, dailyState);
             }
 
+            let components: ActionRowBuilder<ButtonBuilder>[] = [];
+            if (isWin) {
+                const row = new ActionRowBuilder<ButtonBuilder>()
+                    .addComponents(
+                        new ButtonBuilder()
+                            .setCustomId('pokedle_reminder_btn')
+                            .setLabel('🔔 Rappel demain')
+                            .setStyle(ButtonStyle.Success)
+                    );
+                components = [row];
+            }
+
             if (isFirstGuess) {
-                const msg = await interaction.editReply({ embeds: [embed], files: [attachment] });
+                const msg = await interaction.editReply({ embeds: [embed], files: [attachment], components });
                 session.messageId = msg.id;
                 session.channelId = msg.channelId;
                 if (isWin) {
@@ -242,7 +257,7 @@ export default {
                         if (channel && channel.isTextBased() && 'messages' in channel) {
                             const msg = await channel.messages.fetch(session.messageId);
                             if (msg) {
-                                await msg.edit({ embeds: [embed], files: [attachment] });
+                                await msg.edit({ embeds: [embed], files: [attachment], components });
                                 edited = true;
                                 msgLink = `https://discord.com/channels/${interaction.guildId}/${session.channelId}/${session.messageId}`;
                             }
@@ -269,7 +284,7 @@ export default {
                         await interaction.editReply({ content: `Essai pris en compte ! Ton [Pokedle public](${msgLink}) a été mis à jour.` });
                     }
                 } else {
-                    await interaction.editReply({ content: "Voici ton Pokedle (le message original est introuvable) :", embeds: [embed], files: [attachment] });
+                    await interaction.editReply({ content: "Voici ton Pokedle (le message original est introuvable) :", embeds: [embed], files: [attachment], components });
                 }
             }
 
