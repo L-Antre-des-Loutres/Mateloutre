@@ -30,7 +30,10 @@ export class PapiService {
     static async getAllPokemonForPokedle(forceRefresh = false): Promise<PokemonData[]> {
         const cached = this.diskCache.get('pokemonList');
         if (cached && !forceRefresh) {
-            return cached;
+            // Check if the cache is outdated (missing spriteUrl on the first item)
+            if (cached.length === 0 || 'spriteUrl' in cached[0]) {
+                return cached;
+            }
         }
 
         try {
@@ -79,6 +82,7 @@ export class PapiService {
                             generation: generation,
                             height: details.height / 100,
                             weight: details.weight,
+                            spriteUrl: details.spriteUrl,
                         };
                     } catch (e) {
                         console.error(`Error fetching details for pokemon ${summary.id}:`, e);

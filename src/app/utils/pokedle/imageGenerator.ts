@@ -10,6 +10,7 @@ registerFont(fontPath, { family: 'Roboto', weight: 'bold' });
 
 const CELL_WIDTH = 120;
 const CELL_HEIGHT = 60;
+const SPRITE_SIZE = 50;
 const NAME_WIDTH = 220;
 const PADDING = 30;
 const AVATAR_SIZE = 80;
@@ -26,12 +27,24 @@ const COLORS: Record<ComparisonResult | 'bg' | 'text' | 'border', string> = {
 };
 
 /**
+ * Charge un sprite Pokémon depuis une URL. Renvoie null si le chargement échoue.
+ */
+async function loadSprite(url: string): Promise<ReturnType<typeof loadImage> | null> {
+    try {
+        const response = await axios.get(url, { responseType: 'arraybuffer' });
+        return await loadImage(Buffer.from(response.data));
+    } catch {
+        return null;
+    }
+}
+
+/**
  * Génère une image buffer représentant le tableau des essais.
  */
 export async function generatePokedleImage(attempts: PokemonData[], target: PokemonData, avatarUrl?: string, username?: string): Promise<Buffer> {
     const rows = attempts.length;
     const headerHeight = 100;
-    const width = NAME_WIDTH + (CELL_WIDTH * 5) + (PADDING * 2);
+    const width = SPRITE_SIZE + NAME_WIDTH + (CELL_WIDTH * 5) + (PADDING * 2);
     const height = headerHeight + (CELL_HEIGHT * (rows + 1)) + (PADDING * 2);
 
     const canvas = createCanvas(width, height);
@@ -40,6 +53,12 @@ export async function generatePokedleImage(attempts: PokemonData[], target: Poke
     // Background
     ctx.fillStyle = COLORS.bg;
     ctx.fillRect(0, 0, width, height);
+
+    // Pré-chargement de tous les sprites en parallèle
+    const spritePromises = attempts.map(p =>
+        p.spriteUrl ? loadSprite(p.spriteUrl) : Promise.resolve(null)
+    );
+    const sprites = await Promise.all(spritePromises);
 
     // Avatar and Title
     let titleX = PADDING;
@@ -72,6 +91,7 @@ export async function generatePokedleImage(attempts: PokemonData[], target: Poke
 
     // Header Table
     const headers = [
+        '', // Colonne sprite (vide en header)
         POKEDLE_CONSTANTS.HEADER_POKEMON,
         POKEDLE_CONSTANTS.HEADER_TYPE1,
         POKEDLE_CONSTANTS.HEADER_TYPE2,
@@ -86,8 +106,10 @@ export async function generatePokedleImage(attempts: PokemonData[], target: Poke
     let xCursor = PADDING;
     const tableStartY = headerHeight + PADDING;
     headers.forEach((h, i) => {
-        const w = i === 0 ? NAME_WIDTH : CELL_WIDTH;
-        ctx.fillText(h, xCursor + w / 2, tableStartY + CELL_HEIGHT / 2 + 8);
+        const w = i === 0 ? SPRITE_SIZE : (i === 1 ? NAME_WIDTH : CELL_WIDTH);
+        if (h) {
+            ctx.fillText(h, xCursor + w / 2, tableStartY + CELL_HEIGHT / 2 + 8);
+        }
         xCursor += w;
     });
 
@@ -96,6 +118,15 @@ export async function generatePokedleImage(attempts: PokemonData[], target: Poke
         const comp = comparePokemonV2(guess, target);
         const y = tableStartY + (CELL_HEIGHT * (rowIndex + 1));
         xCursor = PADDING;
+
+        // Sprite
+        const sprite = sprites[rowIndex];
+        if (sprite) {
+            const spriteX = xCursor + (SPRITE_SIZE - SPRITE_SIZE) / 2;
+            const spriteY = y + (CELL_HEIGHT - SPRITE_SIZE) / 2;
+            ctx.drawImage(sprite, spriteX, spriteY, SPRITE_SIZE, SPRITE_SIZE);
+        }
+        xCursor += SPRITE_SIZE;
 
         // Name
         ctx.fillStyle = COLORS.text;
@@ -147,7 +178,7 @@ export async function generatePokedleImage(attempts: PokemonData[], target: Poke
                 ctx.font = '14px Roboto';
                 let valStr = s.val?.toString() || "-";
                 if (s.val !== null) {
-                    const headerName = headers[i + 1];
+                    const headerName = headers[i + 2]; // +2 car sprite et nom décalent les indices
                     if (headerName === POKEDLE_CONSTANTS.HEADER_HEIGHT) valStr += POKEDLE_CONSTANTS.UNIT_HEIGHT;
                     if (headerName === POKEDLE_CONSTANTS.HEADER_WEIGHT) valStr += POKEDLE_CONSTANTS.UNIT_WEIGHT;
                 }
@@ -159,3 +190,4 @@ export async function generatePokedleImage(attempts: PokemonData[], target: Poke
 
     return canvas.toBuffer();
 }
+
