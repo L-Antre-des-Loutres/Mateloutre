@@ -12,19 +12,11 @@ services:
       - ./otterlyApiRoutes.json:/app/otterlyApiRoutes.json
       - cache_data:/app/cache
     networks:
-      - mateloutre_bridge
-      - discord-bots-net
       - pocketbase_network
+
+networks:
+  pocketbase_network:
+    external: true
 
 volumes:
   cache_data:
-
-networks:
-  mateloutre_bridge:
-    driver: bridge
-  discord-bots-net:
-    name: discord-bots-net
-    external: true
-  pocketbase_network:
-    name: pocketbase_network
-    external: true
