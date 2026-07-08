@@ -48,10 +48,10 @@ export async function findDiscordUserRecordId(discordId: string): Promise<string
         const pb = await OtterPocketBase.getClient();
         const result = await pb
             .collection(DISCORD_USERS_COLLECTION)
-            .getList<DiscordUserRecord>(1, 1, { filter: `discord_id="${discordId}"` });
+            .getList<DiscordUserRecord>(1, 1, { filter: `discord_id="${discordId}"`, requestKey: null });
         if (result.items.length === 0) {
             try {
-                const newRecord = await pb.collection(DISCORD_USERS_COLLECTION).create<DiscordUserRecord>({ discord_id: discordId });
+                const newRecord = await pb.collection(DISCORD_USERS_COLLECTION).create<DiscordUserRecord>({ discord_id: discordId }, { requestKey: null });
                 return newRecord.id;
             } catch (createError) {
                 otterlogs.warn(`screenshot: impossible de créer l'utilisateur discord_id=${discordId}: ${createError}`);

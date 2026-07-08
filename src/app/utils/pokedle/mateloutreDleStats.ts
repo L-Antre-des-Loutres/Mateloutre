@@ -58,7 +58,7 @@ export class PokedleStatsService {
 
             if (pbRecordId) {
                 try {
-                    await pb.collection('pokedeviner_stats').update(pbRecordId, payload);
+                    await pb.collection('pokedeviner_stats').update(pbRecordId, payload, { requestKey: null });
                     return pbRecordId;
                 } catch (updateError: unknown) {
                     if (updateError && typeof updateError === 'object' && 'status' in updateError && updateError.status === 404) {
@@ -72,7 +72,7 @@ export class PokedleStatsService {
 
             if (!pbRecordId) {
                 payload.start_at = now.toISOString();
-                const record = await pb.collection('pokedeviner_stats').create(payload);
+                const record = await pb.collection('pokedeviner_stats').create(payload, { requestKey: null });
                 otterlogs.debug(`PokedleStatsService: Nouvelle partie créée pour ${discordUserId} (ID: ${record.id}).`);
                 return record.id;
             }
@@ -102,6 +102,7 @@ export class PokedleStatsService {
             const records = await pb.collection('pokedeviner_stats').getFullList<MateloutreDleRecord>({
                 filter: `discord_user = "${pbUserId}" && success_at != ""`,
                 sort:   '-created',
+                requestKey: null
             });
             return records;
         } catch (error) {
