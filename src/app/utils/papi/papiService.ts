@@ -5,7 +5,8 @@ import {
     PkmnSummaryResponse, 
     PkmnTranslationResponse, 
     TypeTranslationResponse,
-    TypeRefResponse
+    TypeRefResponse,
+    PkmnImageResponse
 } from './types/pokemon';
 import { PokemonData } from '../pokedle/gameLogic';
 
@@ -30,7 +31,10 @@ export class PapiService {
     static async getAllPokemonForPokedle(forceRefresh = false): Promise<PokemonData[]> {
         const cached = this.diskCache.get('pokemonList');
         if (cached && !forceRefresh) {
-            return cached;
+            // Check if the cache is valid and has the artworkUrl field
+            if (cached.length > 0 && 'artworkUrl' in cached[0]) {
+                return cached;
+            }
         }
 
         try {
@@ -52,9 +56,10 @@ export class PapiService {
                     try {
                         if (!summary.primaryType) return null;
 
-                        const [details, translations] = await Promise.all([
+                        const [details, translations, mainImage] = await Promise.all([
                             apiClient.get<PkmnResponse>(ENDPOINTS.pokemon.byId(summary.id)),
-                            apiClient.get<PkmnTranslationResponse[]>(ENDPOINTS.pokemon.translations(summary.id))
+                            apiClient.get<PkmnTranslationResponse[]>(ENDPOINTS.pokemon.translations(summary.id)),
+                            apiClient.get<PkmnImageResponse>(ENDPOINTS.pokemon.imageMain(summary.id)).catch(() => null)
                         ]);
 
                         const frTranslation = translations.find(t => t.language === 'FR') || translations.find(t => t.language === 'EN');
@@ -79,6 +84,7 @@ export class PapiService {
                             generation: generation,
                             height: details.height / 100,
                             weight: details.weight,
+                            artworkUrl: mainImage ? mainImage.url : details.spriteUrl,
                         };
                     } catch (e) {
                         console.error(`Error fetching details for pokemon ${summary.id}:`, e);

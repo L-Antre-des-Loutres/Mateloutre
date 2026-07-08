@@ -37,3 +37,12 @@ export interface TypeTranslationResponse {
     language: string;
     name: string;
 }
+
+export interface PkmnImageResponse {
+    id: number;
+    url: string;
+    name: string;
+    tags: string[];
+    main: boolean;
+    addedAt: string;
+}
