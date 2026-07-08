@@ -44,25 +44,35 @@ export function buildPlatformChoices(
 }
 
 export async function findDiscordUserRecordId(discordId: string): Promise<string | undefined> {
-    try {
-        const pb = await OtterPocketBase.getClient();
-        const result = await pb
-            .collection(DISCORD_USERS_COLLECTION)
-            .getList<DiscordUserRecord>(1, 1, { filter: `discord_id="${discordId}"`, requestKey: null });
-        if (result.items.length === 0) {
-            try {
-                const newRecord = await pb.collection(DISCORD_USERS_COLLECTION).create<DiscordUserRecord>({ discord_id: discordId }, { requestKey: null });
-                return newRecord.id;
-            } catch (createError) {
-                otterlogs.warn(`screenshot: impossible de créer l'utilisateur discord_id=${discordId}: ${createError}`);
-                return undefined;
+    let result;
+    for (let attempts = 1; attempts <= 2; attempts++) {
+        try {
+            const pb = await OtterPocketBase.getClient();
+            result = await pb
+                .collection(DISCORD_USERS_COLLECTION)
+                .getList<DiscordUserRecord>(1, 1, { filter: `discord_id="${discordId}"`, requestKey: null });
+            break; // Success
+        } catch (error: unknown) {
+            if (error && typeof error === 'object' && 'status' in error && error.status === 0 && attempts < 2) {
+                otterlogs.warn(`screenshot: Fetch failed (Error 0) for discord_id=${discordId}, retrying...`);
+                continue;
             }
+            otterlogs.warn(`screenshot: erreur lors de la recherche discord_users pour discord_id=${discordId}: ${error}`);
+            return undefined;
         }
-        return result.items[0].id;
-    } catch (error) {
-        otterlogs.warn(`screenshot: erreur lors de la recherche discord_users pour discord_id=${discordId}: ${error}`);
-        return undefined;
     }
+
+    if (!result || result.items.length === 0) {
+        try {
+            const pb = await OtterPocketBase.getClient();
+            const newRecord = await pb.collection(DISCORD_USERS_COLLECTION).create<DiscordUserRecord>({ discord_id: discordId }, { requestKey: null });
+            return newRecord.id;
+        } catch (createError) {
+            otterlogs.warn(`screenshot: impossible de créer l'utilisateur discord_id=${discordId}: ${createError}`);
+            return undefined;
+        }
+    }
+    return result.items[0].id;
 }
 
 export interface ScreenshotData {

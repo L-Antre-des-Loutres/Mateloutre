@@ -57,25 +57,43 @@ export class PokedleStatsService {
             }
 
             if (pbRecordId) {
-                try {
-                    await pb.collection('pokedeviner_stats').update(pbRecordId, payload, { requestKey: null });
-                    return pbRecordId;
-                } catch (updateError: unknown) {
-                    if (updateError && typeof updateError === 'object' && 'status' in updateError && updateError.status === 404) {
-                        otterlogs.warn(`PokedleStatsService: Partie ${pbRecordId} introuvable (404). Recréation d'une nouvelle ligne.`);
-                        pbRecordId = undefined; // Force la création
-                    } else {
-                        throw updateError;
+                for (let attempts = 1; attempts <= 2; attempts++) {
+                    try {
+                        await pb.collection('pokedeviner_stats').update(pbRecordId, payload, { requestKey: null });
+                        return pbRecordId;
+                    } catch (updateError: unknown) {
+                        if (updateError && typeof updateError === 'object' && 'status' in updateError && updateError.status === 0 && attempts < 2) {
+                            otterlogs.warn(`PokedleStatsService: Fetch failed (Error 0) on update, retrying...`);
+                            continue;
+                        }
+                        if (updateError && typeof updateError === 'object' && 'status' in updateError && updateError.status === 404) {
+                            otterlogs.warn(`PokedleStatsService: Partie ${pbRecordId} introuvable (404). Recréation d'une nouvelle ligne.`);
+                            pbRecordId = undefined; // Force la création
+                            break; // Sort de la boucle de retry d'update
+                        } else {
+                            throw updateError;
+                        }
                     }
                 }
             }
 
             if (!pbRecordId) {
                 payload.start_at = now.toISOString();
-                const record = await pb.collection('pokedeviner_stats').create(payload, { requestKey: null });
-                otterlogs.debug(`PokedleStatsService: Nouvelle partie créée pour ${discordUserId} (ID: ${record.id}).`);
-                return record.id;
+                for (let attempts = 1; attempts <= 2; attempts++) {
+                    try {
+                        const record = await pb.collection('pokedeviner_stats').create(payload, { requestKey: null });
+                        otterlogs.debug(`PokedleStatsService: Nouvelle partie créée pour ${discordUserId} (ID: ${record.id}).`);
+                        return record.id;
+                    } catch (createError: unknown) {
+                        if (createError && typeof createError === 'object' && 'status' in createError && createError.status === 0 && attempts < 2) {
+                            otterlogs.warn(`PokedleStatsService: Fetch failed (Error 0) on create, retrying...`);
+                            continue;
+                        }
+                        throw createError;
+                    }
+                }
             }
+            return pbRecordId;
         } catch (error: unknown) {
             otterlogs.error(`PokedleStatsService: Erreur lors de la synchro de la partie : ${error}`);
             if (error && typeof error === 'object' && 'data' in error) {
@@ -99,12 +117,23 @@ export class PokedleStatsService {
 
             const pb = await OtterPocketBase.getClient();
             // On ne récupère que les parties gagnées (success_at n'est pas vide)
-            const records = await pb.collection('pokedeviner_stats').getFullList<MateloutreDleRecord>({
-                filter: `discord_user = "${pbUserId}" && success_at != ""`,
-                sort:   '-created',
-                requestKey: null
-            });
-            return records;
+            for (let attempts = 1; attempts <= 2; attempts++) {
+                try {
+                    const records = await pb.collection('pokedeviner_stats').getFullList<MateloutreDleRecord>({
+                        filter: `discord_user = "${pbUserId}" && success_at != ""`,
+                        sort:   '-created',
+                        requestKey: null
+                    });
+                    return records;
+                } catch (error: unknown) {
+                    if (error && typeof error === 'object' && 'status' in error && error.status === 0 && attempts < 2) {
+                        otterlogs.warn(`PokedleStatsService: Fetch failed (Error 0) on getStatsForUser, retrying...`);
+                        continue;
+                    }
+                    throw error;
+                }
+            }
+            return [];
         } catch (error) {
             otterlogs.error(`PokedleStatsService: Erreur lors de la récupération des stats : ${error}`);
             return [];
