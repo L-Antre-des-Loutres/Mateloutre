@@ -6,7 +6,7 @@ export interface PokemonData {
     generation: number;
     height: number;
     weight: number;
-    spriteUrl?: string;
+    artworkUrl?: string;
 }
 
 export type ComparisonResult = "exact" | "partial" | "wrong" | "higher" | "lower";

@@ -56,7 +56,7 @@ export async function generatePokedleImage(attempts: PokemonData[], target: Poke
 
     // Pré-chargement de tous les sprites en parallèle
     const spritePromises = attempts.map(p =>
-        p.spriteUrl ? loadSprite(p.spriteUrl) : Promise.resolve(null)
+        p.artworkUrl ? loadSprite(p.artworkUrl) : Promise.resolve(null)
     );
     const sprites = await Promise.all(spritePromises);
 
