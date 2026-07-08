@@ -31,7 +31,9 @@ const COLORS: Record<ComparisonResult | 'bg' | 'text' | 'border', string> = {
  */
 async function loadSprite(url: string): Promise<ReturnType<typeof loadImage> | null> {
     try {
-        const response = await axios.get(url, { responseType: 'arraybuffer' });
+        const PAPI_URL = process.env.PAPI_URL || 'http://localhost:8080';
+        const finalUrl = url.startsWith('/') ? `${PAPI_URL}${url}` : url;
+        const response = await axios.get(finalUrl, { responseType: 'arraybuffer' });
         return await loadImage(Buffer.from(response.data));
     } catch {
         return null;
