@@ -1,6 +1,7 @@
 import PocketBase from 'pocketbase';
 import fs from 'fs';
 import yaml from 'js-yaml';
+import fetch from 'cross-fetch';
 import { PocketBaseAlias, PocketBaseConfig } from './modules/PocketBaseTypes';
 import { otterlogs } from '../otterlogs';
 
@@ -40,8 +41,9 @@ export class OtterPocketBase {
             OtterPocketBase.pb.autoCancellation(false);
 
             // Désactivation du keep-alive pour Node 18 fetch
-            OtterPocketBase.pb.beforeSend = function (reqUrl, options) {
+            OtterPocketBase.pb.beforeSend = function (reqUrl, options: Record<string, unknown>) {
                 options.headers = Object.assign({}, options.headers, { "Connection": "close" });
+                options.fetch = fetch; // Inject cross-fetch
                 return { url: reqUrl, options };
             };
 
