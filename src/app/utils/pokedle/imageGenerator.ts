@@ -33,7 +33,12 @@ async function loadSprite(url: string): Promise<ReturnType<typeof loadImage> | n
     try {
         const PAPI_URL = process.env.PAPI_URL || 'http://localhost:8080';
         const finalUrl = url.startsWith('/') ? `${PAPI_URL}${url}` : url;
-        const response = await axios.get(finalUrl, { responseType: 'arraybuffer' });
+        const response = await axios.get(finalUrl, { 
+            responseType: 'arraybuffer',
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
+            }
+        });
         return await loadImage(Buffer.from(response.data));
     } catch {
         return null;

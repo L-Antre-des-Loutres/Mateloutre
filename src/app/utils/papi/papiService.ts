@@ -84,7 +84,7 @@ export class PapiService {
                             generation: generation,
                             height: details.height / 100,
                             weight: details.weight,
-                            artworkUrl: mainImage ? mainImage.url : details.spriteUrl,
+                            artworkUrl: mainImage ? mainImage.url : `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${details.id}.png`,
                         };
                     } catch (e) {
                         console.error(`Error fetching details for pokemon ${summary.id}:`, e);
