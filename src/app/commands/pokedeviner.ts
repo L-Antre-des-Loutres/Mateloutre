@@ -15,7 +15,6 @@ import {
     ButtonBuilder,
     ButtonStyle,
 } from "discord.js";
-import crypto from "crypto";
 import { SlashCommand } from "../../otterbots/types";
 import { generatePokedleImage } from "../utils/pokedle/imageGenerator";
 import { OtterCache } from "../../otterbots/utils/ottercache/ottercache";
@@ -168,13 +167,7 @@ export default {
         }
 
         if (!session.targetPokemonId) {
-            const getDailyIndex = (seed: string, max: number) => {
-                const hashHex = crypto.createHash('md5').update(seed).digest('hex');
-                const hashInt = parseInt(hashHex.substring(0, 8), 16);
-                return hashInt % max;
-            };
-
-            const targetIndex = getDailyIndex(`${todayISO}_${userId}_${dailyState.currentGameId}`, pokemonList.length);
+            const targetIndex = Math.floor(Math.random() * pokemonList.length);
             session.targetPokemonId = pokemonList[targetIndex].id;
             
             // On le sauvegarde immediatement si on ne va pas set la session plus bas.
