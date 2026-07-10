@@ -160,7 +160,13 @@ export async function generatePokedleImage(attempts: PokemonData[], target: Poke
             
             if (s.res === "exact" || s.res === "partial" || s.res === "wrong") {
                 ctx.font = '16px Roboto';
-                ctx.fillText(s.val?.toString() || "-", xCursor + CELL_WIDTH / 2, y + CELL_HEIGHT / 2 + 7);
+                let valStr = s.val?.toString() || "-";
+                if (s.val !== null) {
+                    const headerName = headers[i + 2];
+                    if (headerName === POKEDLE_CONSTANTS.HEADER_HEIGHT) valStr += POKEDLE_CONSTANTS.UNIT_HEIGHT;
+                    if (headerName === POKEDLE_CONSTANTS.HEADER_WEIGHT) valStr += POKEDLE_CONSTANTS.UNIT_WEIGHT;
+                }
+                ctx.fillText(valStr, xCursor + CELL_WIDTH / 2, y + CELL_HEIGHT / 2 + 7);
             } else {
                 // Dessin de la flèche
                 const arrowSize = 16;
