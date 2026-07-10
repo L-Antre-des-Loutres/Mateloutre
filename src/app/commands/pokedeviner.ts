@@ -23,6 +23,8 @@ import { POKEDLE_CONSTANTS } from "../utils/pokedle/constants";
 import { PapiService } from "../utils/papi/papiService";
 import { PokemonData } from "../utils/pokedle/gameLogic";
 import { PokedleStatsService } from "../utils/pokedle/mateloutreDleStats";
+import { OtterPocketBase } from "../../otterbots/utils/pocketbase/pocketbase";
+import { otterlogs } from "../../otterbots/utils/otterlogs";
 
 export interface PokedleSession {
     attemptsIds: number[];
@@ -30,6 +32,7 @@ export interface PokedleSession {
     channelId?: string;
     pbRecordId?: string; // ID of the PocketBase record
     targetPokemonId?: number;
+    startedAt?: string;
 }
 
 export interface PokedleDailyState {
@@ -117,12 +120,39 @@ export default {
         }
 
         const sessionRaw = pokedleCache.get(cacheKey);
-        let session: PokedleSession = { attemptsIds: [] };
+        let session: PokedleSession = { attemptsIds: [], startedAt: now.toISOString() };
         if (sessionRaw) {
             if (Array.isArray(sessionRaw)) {
                 session.attemptsIds = sessionRaw;
+                session.startedAt = now.toISOString();
             } else {
                 session = sessionRaw as PokedleSession;
+                if (!session.startedAt) session.startedAt = now.toISOString();
+            }
+        }
+
+        let expiredPrefix = "";
+        if (session.startedAt) {
+            const startedDate = new Date(session.startedAt);
+            const diffHours = (now.getTime() - startedDate.getTime()) / (1000 * 60 * 60);
+            
+            // Si la partie date de plus de 6h, n'est pas déjà gagnée (pas supprimée du cache)
+            if (diffHours >= 6 && session.attemptsIds.length > 0 && subcommand !== POKEDLE_CONSTANTS.SUBCOMMAND_STATS_NAME) {
+                // Marquer dans PB comme expiré
+                if (session.pbRecordId) {
+                    try {
+                        const pb = await OtterPocketBase.getClient();
+                        await pb.collection('pokedeviner_stats').update(session.pbRecordId, { is_expired: true }, { requestKey: null });
+                    } catch (e) {
+                        otterlogs.error(`Impossible d'expirer la partie ${session.pbRecordId} dans PB: ${e}`);
+                    }
+                }
+                
+                // Réinitialiser la session
+                pokedleCache.delete(cacheKey);
+                // On garde le même ID de partie du jour, on repart juste à zéro
+                session = { attemptsIds: [], startedAt: now.toISOString() };
+                expiredPrefix = "⏳ **Ta partie précédente a expiré (plus de 6h d'inactivité).**\n";
             }
         }
 
@@ -238,7 +268,8 @@ export default {
             }
 
             if (isFirstGuess) {
-                const msg = await interaction.editReply({ embeds: [embed], files: [attachment], components });
+                const content = expiredPrefix ? expiredPrefix : null;
+                const msg = await interaction.editReply({ content, embeds: [embed], files: [attachment], components });
                 session.messageId = msg.id;
                 session.channelId = msg.channelId;
                 if (isWin) {
@@ -289,7 +320,7 @@ export default {
 
         } else if (subcommand === POKEDLE_CONSTANTS.SUBCOMMAND_VIEW_NAME) {
             if (attemptsIds.length === 0) {
-                await interaction.editReply({ content: "Tu n'as pas encore commencé ta partie d'aujourd'hui !" });
+                await interaction.editReply({ content: expiredPrefix + "Tu n'as pas encore commencé ta partie d'aujourd'hui !" });
                 return;
             }
 
