@@ -1,6 +1,6 @@
-import { OtterPocketBase } from '../../../otterbots/utils/pocketbase/pocketbase';
-import { otterlogs } from '../../../otterbots/utils/otterlogs';
-import { findDiscordUserRecordId } from '../screenshotHelper';
+import {OtterPocketBase} from '../../../otterbots/utils/pocketbase/pocketbase';
+import {otterlogs} from '../../../otterbots/utils/otterlogs';
+import {findDiscordUserRecordId} from '../screenshotHelper';
 
 /**
  * Collection : pokedeviner_stats
@@ -8,7 +8,6 @@ import { findDiscordUserRecordId } from '../screenshotHelper';
 export interface MateloutreDleRecord {
     id: string;
     discord_user: string;
-    start_at: string;
     success_at: string;
     nb_try: number;
     pokemon_name: string;
@@ -74,7 +73,6 @@ export class PokedleStatsService {
             }
 
             if (!pbRecordId) {
-                payload.start_at = now.toISOString();
                 const record = await pb.collection('pokedeviner_stats').create(payload, { requestKey: null });
                 otterlogs.debug(`PokedleStatsService: Nouvelle partie créée pour ${discordUserId} (ID: ${record.id}).`);
                 return record.id;
@@ -135,12 +133,11 @@ export class PokedleStatsService {
 
             const pb = await OtterPocketBase.getClient();
             // On ne récupère que les parties gagnées (success_at n'est pas vide)
-            const records = await pb.collection('pokedeviner_stats').getFullList<MateloutreDleRecord>({
+            return await pb.collection('pokedeviner_stats').getFullList<MateloutreDleRecord>({
                 filter: `discord_user = "${pbUserId}" && success_at != ""`,
-                sort:   '-created',
+                sort: '-created',
                 requestKey: null
             });
-            return records;
         } catch (error) {
             otterlogs.error(`PokedleStatsService: Erreur lors de la récupération des stats : ${error}`);
             return [];
