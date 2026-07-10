@@ -13,6 +13,7 @@ export interface MateloutreDleRecord {
     nb_try: number;
     pokemon_name: string;
     pokemon_try_list: string | string[]; // Allow string or array
+    is_expired: boolean;
     created: string;
     updated: string;
 }
@@ -31,7 +32,8 @@ export class PokedleStatsService {
         targetPokemonName: string,
         tryList: string[],
         isWin: boolean,
-        pbRecordId?: string
+        pbRecordId?: string,
+        isExpired: boolean = false
     ): Promise<string | undefined> {
         try {
             const pbUserId = await findDiscordUserRecordId(discordUserId);
@@ -48,6 +50,7 @@ export class PokedleStatsService {
                 pokemon_name: targetPokemonName,
                 pokemon_try_list: JSON.stringify(tryList),
                 nb_try: tryList.length,
+                is_expired: isExpired,
             };
 
             if (isWin) {
@@ -83,6 +86,38 @@ export class PokedleStatsService {
                 otterlogs.error(`PokedleStatsService: Détails validation PB : ${JSON.stringify((error as { data: unknown }).data)}`);
             }
             return pbRecordId;
+        }
+    }
+
+    /**
+     * Marque toutes les parties en cours de plus de `hours` heures comme expirées.
+     */
+    static async expireOldGames(hours: number): Promise<void> {
+        try {
+            const pb = await OtterPocketBase.getClient();
+            const dateLimit = new Date();
+            dateLimit.setHours(dateLimit.getHours() - hours);
+            const dateLimitStr = dateLimit.toISOString().replace("T", " "); // PocketBase date format
+
+            // Récupère les parties non terminées, non expirées, et plus vieilles que la limite
+            const expiredRecords = await pb.collection('pokedeviner_stats').getFullList<MateloutreDleRecord>({
+                filter: `success_at = "" && is_expired = false && created <= "${dateLimitStr}"`,
+                requestKey: null
+            });
+
+            if (expiredRecords.length === 0) return;
+
+            otterlogs.log(`PokedleStatsService: Expiration de ${expiredRecords.length} partie(s) abandonnée(s) de plus de ${hours}h.`);
+
+            for (const record of expiredRecords) {
+                try {
+                    await pb.collection('pokedeviner_stats').update(record.id, { is_expired: true }, { requestKey: null });
+                } catch (err) {
+                    otterlogs.error(`PokedleStatsService: Erreur lors de l'expiration de la partie ${record.id}: ${err}`);
+                }
+            }
+        } catch (error) {
+            otterlogs.error(`PokedleStatsService: Erreur lors de la vérification des expirations: ${error}`);
         }
     }
 

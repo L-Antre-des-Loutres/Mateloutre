@@ -35,6 +35,7 @@ import {TextChannel, EmbedBuilder, ColorResolvable} from "discord.js";
 import {OtterCache} from "../../otterbots/utils/ottercache/ottercache";
 import {POKEDLE_CONSTANTS} from "../utils/pokedle/constants";
 import {PokedleReminderService} from "../utils/pokedle/pokedleReminderCache";
+import {PokedleStatsService} from "../utils/pokedle/mateloutreDleStats";
 
 const CACHE_FILE = path.join(__dirname, '../../../cache/pokekalos-latest-news.cache');
 
@@ -54,6 +55,7 @@ const pokedleTaskCache = new OtterCache<unknown>(POKEDLE_CONSTANTS.CACHE_FILE_NA
 export const tasks = [
     { name: "Pokekalos News Scraper",    time: "*/15 * * * *", task: async () => scrapeNews(),          period: "" },
     { name: "Pokedle Reminders Check",   time: "*/15 * * * *", task: async () => processPokedleReminders(), period: "" },
+    { name: "Pokedle Expiration Check",  time: "0 * * * *",    task: async () => PokedleStatsService.expireOldGames(6), period: "" },
     { name: "Pokedle Cache Weekly Clear", time: "0 0 * * 0",   task: async () => clearPokedleCache(),   period: "" },
 ];
 
