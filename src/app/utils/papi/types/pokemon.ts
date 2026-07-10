@@ -4,6 +4,11 @@ export interface TypeRefResponse {
     color: string;
 }
 
+export interface AbilityRefResponse {
+    id: number;
+    symbol: string;
+}
+
 export interface PkmnSummaryResponse {
     id: number;
     symbol: string;
@@ -19,11 +24,38 @@ export interface PkmnResponse {
     nationalDexNumber: number;
     primaryType: TypeRefResponse | null;
     secondaryType: TypeRefResponse | null;
+    primaryAbility: AbilityRefResponse | null;
+    secondaryAbility: AbilityRefResponse | null;
+    hiddenAbility: AbilityRefResponse | null;
     tags: string[];
     height: number;
     weight: number;
+    baseHp: number;
+    baseAttack: number;
+    baseDefense: number;
+    baseSpeAttack: number;
+    baseSpeDefense: number;
+    baseSpeed: number;
     spriteUrl: string;
-    // ... other fields if needed, but these are the ones for Pokedle
+}
+
+export type MoveLearnMethod = "LEVEL_UP" | "MACHINE" | "EGG" | "TUTOR";
+
+export interface MoveResponse {
+    id: number;
+    symbol: string;
+    type: TypeRefResponse | null;
+    power: number;
+    accuracy: number;
+    pp: number;
+}
+
+export interface MovesetResponse {
+    id: number;
+    pkmnId: number;
+    move: MoveResponse;
+    learnMethod: MoveLearnMethod;
+    learnLevel: number | null;
 }
 
 export interface PkmnTranslationResponse {
@@ -36,4 +68,25 @@ export interface PkmnTranslationResponse {
 export interface TypeTranslationResponse {
     language: string;
     name: string;
+}
+
+export interface AbilityTranslationResponse {
+    language: string;
+    name: string;
+    description: string;
+}
+
+export interface MoveTranslationResponse {
+    language: string;
+    name: string;
+    description: string;
+}
+
+// Spring Data pagination wrapper returned by list endpoints.
+export interface PapiPage<T> {
+    content: T[];
+    totalElements: number;
+    totalPages: number;
+    number: number;
+    size: number;
 }

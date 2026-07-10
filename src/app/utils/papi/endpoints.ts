@@ -36,6 +36,7 @@ export const ENDPOINTS = {
         base:             '/api/pokemon',
         count:            '/api/pokemon/count',
         default:          '/api/pokemon/default',
+        byTag:            (tag: string, size = 1000) => `/api/pokemon?tag=${encodeURIComponent(tag)}&size=${size}`,
         byId:             (id: number) => `/api/pokemon/${id}`,
         symbol:           (id: number) => `/api/pokemon/${id}/symbol`,
         nationalDexNumber:(id: number) => `/api/pokemon/${id}/nationalDexNumber`,

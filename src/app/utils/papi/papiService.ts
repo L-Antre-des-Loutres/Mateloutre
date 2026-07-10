@@ -1,17 +1,21 @@
 import { apiClient } from './client';
 import { ENDPOINTS } from './endpoints';
-import { 
-    PkmnResponse, 
-    PkmnSummaryResponse, 
-    PkmnTranslationResponse, 
+import {
+    PkmnResponse,
+    PkmnSummaryResponse,
+    PkmnTranslationResponse,
     TypeTranslationResponse,
-    TypeRefResponse
+    TypeRefResponse,
+    AbilityTranslationResponse,
+    MoveTranslationResponse
 } from './types/pokemon';
 import { PokemonData } from '../pokedle/gameLogic';
 
 export class PapiService {
     private static pokemonCache: PokemonData[] | null = null;
     private static typeCache: Map<number, string> = new Map();
+    private static abilityNameCache: Map<number, string> = new Map();
+    private static moveNameCache: Map<number, string> = new Map();
 
     /**
      * Fetches all pokemon and their French translations, then maps them to PokemonData.
@@ -99,6 +103,47 @@ export class PapiService {
         } catch {
             return 'Inconnu';
         }
+    }
+
+    /** French type name, backed by the shared type cache. */
+    static async getTypeNameFr(typeId: number): Promise<string> {
+        return this.getTypeName(typeId, 'FR');
+    }
+
+    /** French ability name, cached across calls. */
+    static async getAbilityNameFr(abilityId: number): Promise<string> {
+        if (this.abilityNameCache.has(abilityId)) {
+            return this.abilityNameCache.get(abilityId)!;
+        }
+        try {
+            const translations = await apiClient.get<AbilityTranslationResponse[]>(ENDPOINTS.abilities.translations(abilityId));
+            const name = (translations.find(t => t.language === 'FR') || translations.find(t => t.language === 'EN'))?.name || 'Inconnu';
+            this.abilityNameCache.set(abilityId, name);
+            return name;
+        } catch {
+            return 'Inconnu';
+        }
+    }
+
+    /** French move name, cached across calls. */
+    static async getMoveNameFr(moveId: number): Promise<string> {
+        if (this.moveNameCache.has(moveId)) {
+            return this.moveNameCache.get(moveId)!;
+        }
+        try {
+            const translations = await apiClient.get<MoveTranslationResponse[]>(ENDPOINTS.moves.translations(moveId));
+            const name = (translations.find(t => t.language === 'FR') || translations.find(t => t.language === 'EN'))?.name || 'Inconnu';
+            this.moveNameCache.set(moveId, name);
+            return name;
+        } catch {
+            return 'Inconnu';
+        }
+    }
+
+    /** Maps each pokemon id to its French name, reusing the Pokedle cache. */
+    static async getPokemonNameMap(): Promise<Map<number, string>> {
+        const list = await this.getAllPokemonForPokedle();
+        return new Map(list.map(p => [p.id, p.name]));
     }
 
     private static inferGeneration(dexNumber: number): number {
