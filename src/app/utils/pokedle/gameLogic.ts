@@ -7,6 +7,8 @@ export interface PokemonData {
     height: number;
     weight: number;
     artworkUrl?: string;
+    tags?: string[];
+    nationalDexNumber?: number;
 }
 
 export type ComparisonResult = "exact" | "partial" | "wrong" | "higher" | "lower";

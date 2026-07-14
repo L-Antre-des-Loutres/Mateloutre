@@ -50,12 +50,30 @@ export async function otterBots_loadCommands(client: Client): Promise<void> {
             }
             // Send commands to Discord
             const rest = new REST({version: "10"}).setToken(process.env.BOT_TOKEN!);
-            await rest.put(
-                Routes.applicationCommands(process.env.DISCORD_CLIENT_ID!),
-                {body: commandsData}
-            );
+            const clientId = process.env.DISCORD_CLIENT_ID!;
+            const guildId = process.env.DISCORD_GUILD_ID;
 
-            otterlogs.success(`${commandsData.length} command(s) registered on Discord.`);
+            if (process.env.NODE_ENV === "dev" && guildId) {
+                // Guild commands appear instantly, ideal for development
+                await rest.put(
+                    Routes.applicationGuildCommands(clientId, guildId),
+                    {body: commandsData}
+                );
+                // Clear global commands to avoid duplicate listings
+                await rest.put(Routes.applicationCommands(clientId), {body: []});
+                otterlogs.success(`${commandsData.length} command(s) registered on guild ${guildId}.`);
+            } else {
+                // Global commands can take up to 1h to propagate, used in production
+                await rest.put(
+                    Routes.applicationCommands(clientId),
+                    {body: commandsData}
+                );
+                // Clear guild commands to avoid duplicate listings
+                if (guildId) {
+                    await rest.put(Routes.applicationGuildCommands(clientId, guildId), {body: []});
+                }
+                otterlogs.success(`${commandsData.length} command(s) registered globally.`);
+            }
         } catch (error) {
             otterlogs.error("Error loading commands:" + error);
         }
