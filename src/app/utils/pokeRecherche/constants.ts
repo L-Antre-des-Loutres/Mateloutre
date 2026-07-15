@@ -50,3 +50,40 @@ export const POKE_TAGS: PokeTag[] = [
     { tag: "mythical",  label: "Mythiques" },
     { tag: "baby",      label: "Bébés Pokémon" },
 ];
+
+/**
+ * Maps a Pokémon type (French name) to a custom application emoji (<:name:id>).
+ * Add or tweak entries here; unknown types fall back to DEFAULT_TYPE_EMOJI.
+ */
+export const TYPE_EMOJIS: Record<string, string> = {
+    "Normal":    "<:normal:1526689871543144698>",
+    "Combat":    "<:fighting:1526689862101504170>",
+    "Vol":       "<:flying:1526689864765149184>",
+    "Poison":    "<:poison:1526689872935649382>",
+    "Sol":       "<:ground:1526689868791676978>",
+    "Roche":     "<:rock:1526689876177588345>",
+    "Insecte":   "<:bug:1526689854174400653>",
+    "Spectre":   "<:ghost:1526689865872183489>",
+    "Acier":     "<:steel:1526689877394194575>",
+    "Feu":       "<:fire:1526689863292948551>",
+    "Eau":       "<:water:1526689880183406622>",
+    "Plante":    "<:grass:1526689867436789781>",
+    "Électrik":  "<:electric:1526689859509555220>",
+    "Psy":       "<:psychic:1526689874365911121>",
+    "Glace":     "<:ice:1526689870146441328>",
+    "Dragon":    "<:dragon:1526689857580040212>",
+    "Ténèbres":  "<:dark:1526689855281692692>",
+    "Fée":       "<:fairy:1526689860797333674>",
+    "Stellaire": "<:stellar:1526689878820131080>",
+};
+
+// Shown when a type has no entry in the map above
+export const DEFAULT_TYPE_EMOJI = "<:unknown:1526699126061006998>";
+
+/**
+ * Returns the emoji for a type (case-insensitive), or the fallback if unknown.
+ */
+export function getTypeEmoji(type: string): string {
+    const match = Object.keys(TYPE_EMOJIS).find(k => k.toLowerCase() === type.toLowerCase());
+    return match ? TYPE_EMOJIS[match] : DEFAULT_TYPE_EMOJI;
+}
