@@ -42,16 +42,27 @@ export async function otterBots_interactionCreate(client: Client): Promise<void>
             // /poke-recherche group pagination
             const pagination = parsePaginationId(interaction.customId);
             if (pagination) {
-                await interaction.deferUpdate();
-                const tagConfig = findTagConfig(pagination.tag);
-                if (!tagConfig) return;
+                try {
+                    await interaction.deferUpdate();
+                    const tagConfig = findTagConfig(pagination.tag);
+                    if (!tagConfig) return;
 
-                const pokemonList = await PapiService.getAllPokemonForPokedle();
-                const matches = getGroupMatches(pokemonList, tagConfig.tag);
-                const color = (process.env.BOT_COLOR || "#f89800") as ColorResolvable;
+                    const pokemonList = await PapiService.getAllPokemonForPokedle();
+                    const matches = getGroupMatches(pokemonList, tagConfig.tag);
+                    const color = (process.env.BOT_COLOR || "#f89800") as ColorResolvable;
 
-                const { embeds, components } = buildGroupPage(matches, tagConfig, pagination.page, color);
-                await interaction.editReply({ embeds, components });
+                    const { embeds, components } = buildGroupPage(matches, tagConfig, pagination.page, color);
+                    await interaction.editReply({ embeds, components });
+                } catch (error) {
+                    otterlogs.error(`Error during poke-recherche pagination: ${error}`);
+                    // The click may have failed (bot restart, expired interaction): notify the user if still possible
+                    try {
+                        await interaction.followUp({
+                            content: "🦦 Cette recherche n'est plus disponible. Relance `/poke-recherche`.",
+                            flags: MessageFlags.Ephemeral,
+                        });
+                    } catch { /* interaction expired or already acknowledged, nothing to do */ }
+                }
                 return;
             }
 
