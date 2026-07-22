@@ -18,6 +18,37 @@ export interface MateloutreDleRecord {
 }
 
 export class PokedleStatsService {
+    private static isSuperuserError(error: unknown): boolean {
+        if (!error || typeof error !== "object" || !("status" in error) || error.status !== 403) {
+            return false;
+        }
+
+        const err = error as { message?: unknown; response?: { message?: unknown } };
+        const responseMessage = typeof err.response?.message === "string" ? err.response.message : "";
+        const directMessage = typeof err.message === "string" ? err.message : "";
+        const fullMessage = `${responseMessage} ${directMessage}`.toLowerCase();
+        return fullMessage.includes("only superusers can perform this action");
+    }
+
+    private static async retryAfterSuperuserAuth<T>(operation: () => Promise<T>): Promise<T> {
+        try {
+            return await operation();
+        } catch (error) {
+            if (!PokedleStatsService.isSuperuserError(error)) {
+                throw error;
+            }
+
+            const email = process.env.PB_EMAIL;
+            const password = process.env.PB_PASSWORD;
+            if (!email || !password) {
+                throw error;
+            }
+
+            const pb = await OtterPocketBase.getClient();
+            await pb.collection("_superusers").authWithPassword(email, password);
+            return operation();
+        }
+    }
 
     /**
      * Synchronise une partie de Pokedle avec PocketBase.
@@ -60,7 +91,10 @@ export class PokedleStatsService {
 
             if (pbRecordId) {
                 try {
-                    await pb.collection('pokedeviner_stats').update(pbRecordId, payload, { requestKey: null });
+                    const existingRecordId = pbRecordId;
+                    await PokedleStatsService.retryAfterSuperuserAuth(() =>
+                        pb.collection('pokedeviner_stats').update(existingRecordId, payload, { requestKey: null })
+                    );
                     return pbRecordId;
                 } catch (updateError: unknown) {
                     if (updateError && typeof updateError === 'object' && 'status' in updateError && updateError.status === 404) {
@@ -73,7 +107,9 @@ export class PokedleStatsService {
             }
 
             if (!pbRecordId) {
-                const record = await pb.collection('pokedeviner_stats').create(payload, { requestKey: null });
+                const record = await PokedleStatsService.retryAfterSuperuserAuth(() =>
+                    pb.collection('pokedeviner_stats').create(payload, { requestKey: null })
+                );
                 otterlogs.debug(`PokedleStatsService: Nouvelle partie créée pour ${discordUserId} (ID: ${record.id}).`);
                 return record.id;
             }

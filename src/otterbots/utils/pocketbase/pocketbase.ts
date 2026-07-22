@@ -71,15 +71,26 @@ export class OtterPocketBase {
                         return await originalSend(path, options);
                     } catch (err: unknown) {
                         lastError = err;
+                        const status = (err && typeof err === 'object' && 'status' in err) ? err.status : undefined;
+                        const message = (
+                            err &&
+                            typeof err === 'object' &&
+                            'response' in err &&
+                            err.response &&
+                            typeof err.response === 'object' &&
+                            'message' in err.response &&
+                            typeof err.response.message === 'string'
+                        ) ? err.response.message : "";
                         
-                        if (err && typeof err === 'object' && 'status' in err && err.status === 0) {
+                        if (status === 0) {
                             otterlogs.warn(`OtterPocketBase: Network error 0 on ${path} (attempt ${i + 1}/3). Retrying in ${500 * (i + 1)}ms...`);
                             await new Promise(resolve => setTimeout(resolve, 500 * (i + 1)));
                             continue;
                         }
                         
-                        if (err && typeof err === 'object' && 'status' in err && err.status === 401 && email && password) {
-                            otterlogs.warn(`OtterPocketBase: Token expired (401) on ${path}. Re-authenticating...`);
+                        const requiresSuperuserReauth = status === 403 && message.includes("Only superusers can perform this action");
+                        if ((status === 401 || requiresSuperuserReauth) && email && password) {
+                            otterlogs.warn(`OtterPocketBase: Auth error (${status}) on ${path}. Re-authenticating...`);
                             try {
                                 await authenticate();
                             } catch {
