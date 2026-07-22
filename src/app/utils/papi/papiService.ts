@@ -31,8 +31,8 @@ export class PapiService {
     static async getAllPokemonForPokedle(forceRefresh = false): Promise<PokemonData[]> {
         const cached = this.diskCache.get('pokemonList');
         if (cached && !forceRefresh) {
-            // Check if the cache is valid and has the artworkUrl field
-            if (cached.length > 0 && 'artworkUrl' in cached[0]) {
+            // Refresh older caches that predate the artworkUrl, tags and dex number fields
+            if (cached.length > 0 && 'artworkUrl' in cached[0] && 'tags' in cached[0] && 'nationalDexNumber' in cached[0]) {
                 return cached;
             }
         }
@@ -85,6 +85,8 @@ export class PapiService {
                             height: details.height / 100,
                             weight: details.weight,
                             artworkUrl: mainImage ? mainImage.url : `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${details.id}.png`,
+                            tags: details.tags,
+                            nationalDexNumber: details.nationalDexNumber,
                         };
                     } catch (e) {
                         console.error(`Error fetching details for pokemon ${summary.id}:`, e);

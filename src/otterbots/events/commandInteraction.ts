@@ -3,6 +3,7 @@ import {
     ChatInputCommandInteraction,
     Client,
     ButtonInteraction,
+    ColorResolvable,
     EmbedBuilder,
     MessageFlags,
 } from "discord.js";
@@ -20,6 +21,13 @@ import {
     REFUSED_COLOR,
 } from "../../app/utils/screenshotHelper";
 import { PokedleReminderService } from "../../app/utils/pokedle/pokedleReminderCache";
+import { PapiService } from "../../app/utils/papi/papiService";
+import {
+    buildGroupPage,
+    getGroupMatches,
+    parsePaginationId,
+    findTagConfig,
+} from "../../app/utils/pokeRecherche/pagination";
 
 /**
  * Handles interaction events for chat input commands and executes the appropriate command logic.
@@ -31,6 +39,33 @@ export async function otterBots_interactionCreate(client: Client): Promise<void>
     client.on("interactionCreate", async (interaction) => {
 
         if (interaction.isButton()) {
+            // /poke-recherche group pagination
+            const pagination = parsePaginationId(interaction.customId);
+            if (pagination) {
+                try {
+                    await interaction.deferUpdate();
+                    const tagConfig = findTagConfig(pagination.tag);
+                    if (!tagConfig) return;
+
+                    const pokemonList = await PapiService.getAllPokemonForPokedle();
+                    const matches = getGroupMatches(pokemonList, tagConfig.tag);
+                    const color = (process.env.BOT_COLOR || "#f89800") as ColorResolvable;
+
+                    const { embeds, components } = buildGroupPage(matches, tagConfig, pagination.page, color);
+                    await interaction.editReply({ embeds, components });
+                } catch (error) {
+                    otterlogs.error(`Error during poke-recherche pagination: ${error}`);
+                    // The click may have failed (bot restart, expired interaction): notify the user if still possible
+                    try {
+                        await interaction.followUp({
+                            content: "🦦 Cette recherche n'est plus disponible. Relance `/poke-recherche`.",
+                            flags: MessageFlags.Ephemeral,
+                        });
+                    } catch { /* interaction expired or already acknowledged, nothing to do */ }
+                }
+                return;
+            }
+
             if (interaction.customId === 'pokedle_reminder_btn') {
                 await interaction.deferReply({ flags: MessageFlags.Ephemeral });
                 PokedleReminderService.addReminder(interaction.user.id);
