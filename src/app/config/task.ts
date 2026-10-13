@@ -31,7 +31,9 @@ import {otterlogs} from "../../otterbots/utils/otterlogs";
 import * as fs from "node:fs";
 import path from "path";
 import {fetchPokeNews} from "../scraper/pokeNewsScraper";
-import {TextChannel, EmbedBuilder, ColorResolvable} from "discord.js";
+import {createPokeNewsEmbed} from "../scraper/pokeNewsEmbed";
+import {TextChannel, ColorResolvable} from "discord.js";
+import {inspect} from "node:util";
 import {OtterCache} from "../../otterbots/utils/ottercache/ottercache";
 import {POKEDLE_CONSTANTS} from "../utils/pokedle/constants";
 import {PokedleReminderService} from "../utils/pokedle/pokedleReminderCache";
@@ -117,21 +119,11 @@ export async function scrapeNews() {
         for (const article of news.slice().reverse()) {
             const message = `🗒️ Une nouvelle actualité Pokémon est en ligne sur Pokekalos.`;
 
-            const embed = new EmbedBuilder()
-                .setTitle(article.title)
-                .setURL(article.link)
-                .setDescription(`${article.description}\n🔗 [Lire l'article](${article.link})`)
-                .setImage(article.image)
-                .setColor((process.env.BOT_COLOR || "#f89800") as ColorResolvable)
-                .setFields(
-                    { name: 'Source', value: 'Pokekalos', inline: true },
-                    { name: 'Date', value: article.date, inline: true }
-                )
-                .setFooter({
-                    text: process.env.BOT_NAME || "Mateloutre",
-                    iconURL: clientGatewayIntent.user?.displayAvatarURL() || '',
-                })
-                .setTimestamp();
+            const embed = createPokeNewsEmbed(article, {
+                color: (process.env.BOT_COLOR || "#f89800") as ColorResolvable,
+                botName: process.env.BOT_NAME || "Mateloutre",
+                avatarURL: clientGatewayIntent.user?.displayAvatarURL() || '',
+            });
 
             await channel.send({ content: message, embeds: [embed] });
 
@@ -141,7 +133,7 @@ export async function scrapeNews() {
         // On ne met à jour le cache qu'après avoir tout envoyé
         fs.writeFileSync(CACHE_FILE, news[0].title);
     } catch (error) {
-        otterlogs.error(`Erreur lors du scraping : ${error}`);
+        otterlogs.error(`Erreur lors du scraping : ${inspect(error, { depth: 4, colors: false }).slice(0, 1500)}`);
     }
 }
 
