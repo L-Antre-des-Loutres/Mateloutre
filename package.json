@@ -8,7 +8,8 @@
     "build": "node -e \"require('fs').rmSync('./build', {recursive: true, force: true})\" && tsc",
     "lint": "npx eslint \"src/**/*.ts\"",
     "start": "node ./build/index.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "test:scraper": "npm run build && node --test tests/pokeNewsScraper.test.cjs"
   },
   "repository": {
     "type": "git",
